@@ -1,0 +1,150 @@
+# PanViz Interactive v5.8.7
+
+PanViz is a PLIP-based protein–ligand interaction visualization workflow with a publication-oriented SVG editor. The scientific molecular layer is locked; presentation annotations are editable without changing the underlying PLIP interaction measurements.
+
+## What is complete in v5.8.7
+
+### Input
+- **PDB complex**: upload a complete protein–ligand `.pdb` complex.
+- **Docking PDBQT**: upload a receptor `.pdb` or `.pdbqt` plus a ligand/Vina `.pdbqt` file.
+- Multiple ligand `MODEL` poses are detected and selectable.
+- Vina `REMARK VINA RESULT` scores are shown when present.
+- Windows-safe Open Babel temporary-file handling prevents file-lock cleanup failures.
+
+### Scientific analysis
+- PLIP 3.0.1 analyzes the selected binding site.
+- The completed PLIP analysis is reused for all downstream renders and the interactive editor, so PNG, SVG, and editor construction do not trigger additional scientific re-analysis.
+- Interaction records are preserved for:
+  - Hydrophobic (HPI)
+  - Hydrogen bond (HB)
+  - π-Stacking (PS)
+  - π-Cation (PC)
+  - Salt bridge (SB)
+- Original interaction distances remain separate from editable display text.
+- Duplicate residue→ligand-atom interaction records remain separate and are automatically weighted by multiplicity.
+
+### Locked molecular layer
+- ligand atom identity
+- atom coordinates in the generated figure scene
+- covalent connectivity
+- bond order
+- PLIP-derived scientific interaction records
+
+These fields are not modified by presentation editing.
+
+### Editable presentation layer
+- residue labels and leader lines
+- interaction connectors
+- interaction distance labels
+- legend
+- free text annotations
+- arrows
+- move/select
+- rotate
+- delete/hide graphical annotations
+- undo/redo/reset
+- presentation-layer object resizing with on-canvas handles; page/canvas resizing is disabled to preserve molecular coordinates
+- residue typography, bubble/background styles, and semantic coloring
+- original molecular drawing remains locked to the source representation; original covalent bonds are copy-only sources for standalone graphical bonds
+- interaction type and per-object line styling
+
+### Save / reload / export
+- **Save layout** downloads a portable `.panviz.json` layout.
+- **Load layout** imports a previously saved layout and validates that the site and ligand atom fingerprint match before applying it.
+- **SVG** export is vector-first and excludes editor hit targets/UI.
+- **PNG** export supports 1×, 2×, 4×, and 6× raster scales.
+- **PDF** export uses the edited SVG scene through the browser print dialog.
+- The Streamlit application provides a **complete project ZIP** containing the uploaded source file(s), prepared PDB, original figures, interaction CSVs, initial editor layout, and machine-readable manifest.
+
+## Project bundle layout
+
+```text
+<compound>_PanViz_project.zip
+├── inputs/
+│   ├── original_receptor.pdb[pqt]
+│   └── original_ligand.pdbqt
+├── <binding_site>/
+│   ├── figures/
+│   │   ├── PanViz_interactions.png
+│   │   └── PanViz_interactions.svg
+│   ├── interactions/
+│   │   ├── *_HPI.csv
+│   │   ├── *_HB.csv
+│   │   ├── *_PS.csv
+│   │   ├── *_PC.csv
+│   │   └── *_SB.csv
+│   ├── structures/
+│   │   └── *_prot.pdb
+│   ├── PanViz_initial_layout.json
+│   └── PanViz_manifest.json
+└── PROJECT_README.md
+```
+
+## Run
+
+```bash
+pip install -r requirements.txt
+streamlit run app.py
+```
+
+PyMOL is not required for the web editor path.
+
+## Command-line renderer
+
+The legacy/CLI renderer remains available through `PanViz.py`:
+
+```bash
+python PanViz.py -f complex.pdb -y --output_dir PanViz_results --no-pymol
+```
+
+## Scientific-data policy
+
+PanViz is intentionally separated into a scientific data layer and a presentation layer. Styling operations change how a figure is drawn, not what PLIP measured. A saved layout therefore carries presentation state while the scientific interaction records remain immutable.
+
+### v5.8.7 professional object controls
+PanViz uses a two-layer model: the imported molecular structure is immutable, while independent presentation objects behave like figure-editor objects.
+
+**Original molecular layer**
+- Atoms, atom coordinates, covalent connectivity, and bond order cannot be moved, resized, rotated, restyled, deleted, or recreated.
+- Clicking an original covalent bond selects it only as a **copy source**. It has no edit handles and cannot mutate the chemical topology.
+- `Ctrl+C` / `Ctrl+D` on an original molecular bond creates a standalone graphical bond object. The copy has no atom/source/scientific linkage and is fully editable.
+
+**Independent graphical objects**
+- Graphical covalent bonds: endpoint drag, move, resize by endpoint, rotate, order/color/width/dash styling, copy, cut, paste, duplicate, delete, undo/redo.
+- Non-covalent interactions: endpoint drag, move, expand/compress, direction, rotation, styling, copy, cut, paste, duplicate, delete.
+- Residue labels: move, resize, rotate, text/style editing, leader visibility, copy/cut/paste/duplicate. A copied residue label is detached from its original residue and leader.
+- Distances, free text, arrows, and legend objects: move, resize/rotate where applicable, edit, copy/cut/paste/duplicate, delete, undo/redo.
+- New independent bonds, interactions, distances, text notes, and arrows can be added from the editor.
+
+**Keyboard controls**
+
+| Shortcut | Function |
+|---|---|
+| `Ctrl+C` | Copy selected object(s) |
+| `Ctrl+X` | Cut selected object(s) |
+| `Ctrl+V` | Paste object(s) |
+| `Ctrl+D` | Duplicate object(s) |
+| `Ctrl+A` | Select all editable objects |
+| `Ctrl+Z` | Undo |
+| `Ctrl+Y` / `Ctrl+Shift+Z` | Redo |
+| `Delete` / `Backspace` | Delete selected object(s) |
+| `Arrow keys` | Nudge 1 px |
+| `Shift+Arrow` | Nudge 10 px |
+| `Alt+Left/Right` | Rotate selected object(s) 15° |
+| `+` / `-` | Expand/compress selected bond or interaction |
+| `Tab` / `Shift+Tab` | Cycle through editable objects |
+| `Enter` / `F2` | Edit selected text |
+| `Ctrl+B/I/U` | Bold / italic / underline selected text |
+| `Ctrl+Shift+]` / `Ctrl+Shift+[` | Bring forward / send backward |
+| `Ctrl+S` | Save layout JSON |
+| `Escape` | Close text editor / clear selection |
+
+### v5.8.7 presentation editing with immutable molecular structure
+The scientific molecular scene is rendered directly from the immutable atom/bond data. Original covalent bonds have no edit handles. Their only editor action is selecting them as a source for an independent graphical copy.
+
+A copied/new bond is not chemically linked to the original molecule. Its geometry and styling belong exclusively to the presentation layer, so endpoint dragging, copying, rotation, expansion, compression, or deletion cannot modify the molecular topology.
+
+Existing PLIP interaction records remain the scientific source. Editing their presentation connector changes only the figure representation; copying an interaction creates an independent annotation with its residue/atom/scientific linkage removed. The same independence rule applies to copied residue labels and other annotation objects.
+
+### Canvas rule
+Canvas width/height controls are intentionally disabled. Object-level editing happens inside the fixed scientific figure coordinate system so the original molecular geometry cannot be altered accidentally through page scaling.
