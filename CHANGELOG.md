@@ -1,6 +1,7 @@
-# v6.0.0 — Architecture Upgrade, Publication Renderer Preserved
+# v6.0.0 — Architecture Upgrade + Eight-Class Interaction Rendering
 
-- Promoted the application to PanViz 6.0.0 while retaining the approved publication renderer and editor geometry unchanged from baseline commit `237db30af8639379ed3976657f9bbcce28110725`.
+- Promoted the application to PanViz 6.0.0 while preserving the approved ligand depiction, residue placement, typography, canvas balance, and the existing HPI/HB/SB/PS/PC visual styles from baseline commit `237db30af8639379ed3976657f9bbcce28110725`.
+- Extended only the interaction layer to render all eight PLIP classes, adding water bridges (WB), halogen bonds (XB), and metal coordination (MC) with distinct publication-style colors and dash patterns.
 - Added a canonical scientific-record layer that preserves all eight PLIP interaction classes and exports unified CSV/JSON records.
 - Added a presentation-independent SHA-256 scientific-record signature to project manifests.
 - Fixed PDBQT complex assembly so ligand atom serials begin after the receptor maximum serial.
@@ -8,7 +9,7 @@
 - Centralized version loading through `VERSION.txt` / `panviz_version.py`.
 - Made PyMOL opt-in for the command-line workflow.
 - Added automated v6 architecture tests alongside the golden publication-renderer regression guard.
-- The renderer scene schema remains separately recorded for compatibility; application version changes do not imply visual-renderer changes.
+- Legacy five-class golden geometry remains regression-protected; the three new classes are additive interaction-layer extensions rather than a redesign of the molecule/residue renderer.
 
 # v5.8.7 — Fully Editable Legend
 
