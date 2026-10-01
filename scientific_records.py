@@ -95,7 +95,7 @@ def build_scientific_records(my_interactions) -> tuple[pd.DataFrame, dict[str, p
                     "Interaction": label,
                     "Code": code,
                     "Distance (Å)": _distance(row),
-                    "Rendered in figure": code in RENDERED_INTERACTION_CLASSES,
+                    "Renderer-supported class": code in RENDERED_INTERACTION_CLASSES,
                     "Raw PLIP record": raw_json,
                 }
             )
@@ -108,7 +108,7 @@ def build_scientific_records(my_interactions) -> tuple[pd.DataFrame, dict[str, p
             "Interaction",
             "Code",
             "Distance (Å)",
-            "Rendered in figure",
+            "Renderer-supported class",
             "Raw PLIP record",
         ],
     )
