@@ -61,13 +61,15 @@ These fields are not modified by presentation editing.
 - original molecular drawing remains locked to the source representation; original covalent bonds are copy-only sources for standalone graphical bonds
 - interaction type and per-object line styling
 
-### Save / reload / export
+### Live interaction table and export
+- The interactive editor is the single figure surface; a duplicate static figure is not shown or offered separately for download.
+- One live interaction table is rendered directly below the editor.
+- PLIP-derived rows are marked **Detected**.
+- User-created interaction annotations are added to the same table immediately and marked **Manually added**.
+- Removing a manual interaction removes its table row; detected scientific records remain sourced from the immutable PLIP scientific layer.
 - **Save layout** downloads a portable `.panviz.json` layout.
 - **Load layout** imports a previously saved layout and validates that the site and ligand atom fingerprint match before applying it.
-- **SVG** export is vector-first and excludes editor hit targets/UI.
-- **PNG** export supports 1×, 2×, 4×, and 6× raster scales.
-- **PDF** export uses the edited SVG scene through the browser print dialog.
-- The Streamlit application provides a **complete project ZIP** containing the uploaded source file(s), prepared PDB, original figures, interaction CSVs, initial editor layout, and machine-readable manifest.
+- **SVG**, **PNG**, and **PDF** publication exports are produced directly from the edited figure in the editor.
 
 ## Project bundle layout
 
