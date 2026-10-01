@@ -1,8 +1,8 @@
-# PanViz Interactive v5.8.7
+# PanViz Interactive v6.0.0
 
-PanViz is a PLIP-based protein–ligand interaction visualization workflow with a publication-oriented SVG editor. The scientific molecular layer is locked; presentation annotations are editable without changing the underlying PLIP interaction measurements.
+PanViz is a PLIP-based protein–ligand interaction visualization workflow with a publication-oriented SVG editor. **PanViz 6.0 modernizes the scientific-data and application architecture while preserving the approved publication renderer unchanged.** The scientific molecular layer is locked; presentation annotations are editable without changing the underlying PLIP interaction measurements.
 
-## What is complete in v5.8.7
+## What is complete in v6.0.0
 
 ### Input
 - **PDB complex**: upload a complete protein–ligand `.pdb` complex.
@@ -14,14 +14,27 @@ PanViz is a PLIP-based protein–ligand interaction visualization workflow with 
 ### Scientific analysis
 - PLIP 3.0.1 analyzes the selected binding site.
 - The completed PLIP analysis is reused for all downstream renders and the interactive editor, so PNG, SVG, and editor construction do not trigger additional scientific re-analysis.
-- Interaction records are preserved for:
+- The v6 canonical scientific-record layer preserves all eight PLIP classes:
   - Hydrophobic (HPI)
   - Hydrogen bond (HB)
+  - Water bridge (WB)
+  - Salt bridge (SB)
   - π-Stacking (PS)
   - π-Cation (PC)
-  - Salt bridge (SB)
+  - Halogen bond (XB)
+  - Metal coordination (MC)
+- The protected publication renderer continues to draw its approved five-class visual vocabulary (HPI, HB, SB, PS, PC). WB, XB and MC remain preserved in the scientific record/export layer until a separately approved renderer-design revision adds their visual language.
 - Original interaction distances remain separate from editable display text.
 - Duplicate residue→ligand-atom interaction records remain separate and are automatically weighted by multiplicity.
+
+### v6 architecture upgrades
+- Central version reporting from `VERSION.txt`.
+- One temporary workspace per Streamlit session instead of one new directory per rerun.
+- Docking/PDBQT ligand serials start after the receptor maximum atom serial, preventing atom-ID collisions.
+- Canonical CSV/JSON scientific exports and a stable SHA-256 signature independent of presentation edits.
+- Full PLIP scientific records are generated from the completed PLIP analysis; the publication renderer is not replaced.
+- PyMOL is opt-in in the command-line workflow for better headless/cloud portability.
+- Golden publication-renderer regression tests protect molecule depiction, residue placement, interaction routing, distance labels, colors and stroke hierarchy.
 
 ### Locked molecular layer
 - ligand atom identity
