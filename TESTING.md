@@ -1,3 +1,26 @@
+# Publication renderer golden regression
+
+The molecule/residue/interaction visual design is protected against accidental changes.
+
+Current automated checks:
+- approved 1200×850 golden geometry for representative residue placement;
+- H-bond, π-stacking and hydrophobic interaction endpoint geometry;
+- interaction-distance label placement and formatting;
+- residue and distance font-size scaling;
+- approved semantic interaction colors;
+- approved residue bubble color;
+- covalent/non-covalent stroke hierarchy;
+- residue placement search radii/tangential offsets;
+- interaction endpoint offsets;
+- collision-aware distance-label search geometry;
+- bold magenta distance-label styling.
+
+Baseline commit: `237db30af8639379ed3976657f9bbcce28110725`.
+
+These checks are intended to preserve rendered behavior while still allowing implementation refactoring.
+
+---
+
 # PanViz Interactive v5.8.7 — Testing and validation
 
 ## v5.8.7 molecular hard-lock checks
