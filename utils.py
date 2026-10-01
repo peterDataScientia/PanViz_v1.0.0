@@ -158,7 +158,17 @@ def _distance_text(distance):
         return None
     return f"{float(distance):.2f} Å"
 
-def _get_interactions(input_pdb, hydrophobic_df, hbond_df, pi_stacking_df, pi_cation_df, saltbridge_df, coord_dict):
+def _get_interactions(
+        input_pdb,
+        hydrophobic_df,
+        hbond_df,
+        pi_stacking_df,
+        pi_cation_df,
+        saltbridge_df,
+        waterbridge_df,
+        halogen_df,
+        metal_df,
+        coord_dict):
     interactions = []
     centroids = []
     centroid_counter = 0
@@ -227,6 +237,49 @@ def _get_interactions(input_pdb, hydrophobic_df, hbond_df, pi_stacking_df, pi_ca
                 int_type,
                 distance
             ))
+
+    # Water bridges: anchor at the ligand donor/acceptor atom reported by PLIP.
+    for _, row in waterbridge_df.iterrows():
+        protisdon = bool(row["PROTISDON"])
+        ligand_idx = int(row["ACCEPTOR_IDX"] if protisdon else row["DONOR_IDX"])
+        atom = input_pdb.atoms[ligand_idx - 1].OBAtom
+        int_atom = atom.GetResidue().GetAtomID(atom).strip()
+        distance = _distance_from_row(
+            row,
+            "DIST_A-W" if protisdon else "DIST_D-W",
+            "DIST_D-W",
+            "DIST_A-W",
+        )
+        interactions.append((
+            int_atom,
+            row["RESTYPE"] + str(row["RESNR"]) + "_" + row["RESCHAIN"],
+            "WB",
+            distance
+        ))
+
+    # Halogen bonds: PLIP defines the halogen donor as the ligand-side atom.
+    for _, row in halogen_df.iterrows():
+        atom = input_pdb.atoms[int(row["DON_IDX"]) - 1].OBAtom
+        int_atom = atom.GetResidue().GetAtomID(atom).strip()
+        distance = _distance_from_row(row, "DIST")
+        interactions.append((
+            int_atom,
+            row["RESTYPE"] + str(row["RESNR"]) + "_" + row["RESCHAIN"],
+            "XB",
+            distance
+        ))
+
+    # Metal coordination: use the PLIP metal atom as the ligand-side anchor.
+    for _, row in metal_df.iterrows():
+        atom = input_pdb.atoms[int(row["METAL_IDX"]) - 1].OBAtom
+        int_atom = atom.GetResidue().GetAtomID(atom).strip()
+        distance = _distance_from_row(row, "DIST")
+        interactions.append((
+            int_atom,
+            row["RESTYPE"] + str(row["RESNR"]) + "_" + row["RESCHAIN"],
+            "MC",
+            distance
+        ))
 
     used_res = np.unique(np.array([x[1] for x in interactions]))
     return interactions, centroids, used_res
@@ -414,13 +467,16 @@ def _draw_mol(atom_info, connections, padding, canvas_height, canvas_width, out_
                 ctx.line_to(x1 + nx * offset, y1 + ny * offset)
                 ctx.stroke()
 
-        elif bond_type in {"HPI", "HB", "PS", "PC", "SB"}:
+        elif bond_type in {"HPI", "HB", "PS", "PC", "SB", "WB", "XB", "MC"}:
             colors = {
                 "HPI": (0.35, 0.35, 0.35),
                 "HB": (0.0, 0.0, 0.88),
                 "PS": (0.0, 0.52, 0.0),
                 "PC": (0.88, 0.52, 0.0),
                 "SB": (0.85, 0.0, 0.70),
+                "WB": (0.08, 0.58, 0.72),
+                "XB": (0.48, 0.36, 0.78),
+                "MC": (0.64, 0.34, 0.00),
             }
             color = colors[bond_type]
 
@@ -441,6 +497,9 @@ def _draw_mol(atom_info, connections, padding, canvas_height, canvas_width, out_
                 "PS": 10,
                 "PC": -10,
                 "SB": -5,
+                "WB": 4,
+                "XB": -8,
+                "MC": 8,
             }[bond_type]
 
             ox = (-dy / length) * shift
@@ -627,7 +686,7 @@ def _draw_mol(atom_info, connections, padding, canvas_height, canvas_width, out_
         a, b, bond_type = connection[:3]
         distance = connection[3] if len(connection) >= 4 else None
 
-        if bond_type not in {"HPI", "HB", "PS", "PC", "SB"}:
+        if bond_type not in {"HPI", "HB", "PS", "PC", "SB", "WB", "XB", "MC"}:
             continue
         if distance is None:
             continue
@@ -966,6 +1025,9 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
         pi_stacking_df = analysis["pi_stacking_df"]
         pi_cation_df = analysis["pi_cation_df"]
         saltbridge_df = analysis["saltbridge_df"]
+        waterbridge_df = analysis.get("waterbridge_df", pd.DataFrame())
+        halogen_df = analysis.get("halogen_df", pd.DataFrame())
+        metal_df = analysis.get("metal_df", pd.DataFrame())
     else:
         input_pdb = convert_and_write_pdb(file, file_prot, bsid)
 
@@ -995,6 +1057,9 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
         pi_stacking_df = pd.DataFrame(interactions["pistacking"][1:], columns=interactions["pistacking"][0])
         pi_cation_df = pd.DataFrame(interactions["pication"][1:], columns=interactions["pication"][0])
         saltbridge_df = pd.DataFrame(interactions["saltbridge"][1:], columns=interactions["saltbridge"][0])
+        waterbridge_df = pd.DataFrame(interactions["waterbridge"][1:], columns=interactions["waterbridge"][0])
+        halogen_df = pd.DataFrame(interactions["halogen"][1:], columns=interactions["halogen"][0])
+        metal_df = pd.DataFrame(interactions["metal"][1:], columns=interactions["metal"][0])
 
         if save_pymol:
             _save_pymol(my_mol, bsid, pymol_dir)
@@ -1010,6 +1075,12 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
             pi_cation_df.to_csv(os.path.join(interactions_dir, f"{input_stem}_PC.csv"), index=False)
         if len(saltbridge_df) > 0:
             saltbridge_df.to_csv(os.path.join(interactions_dir, f"{input_stem}_SB.csv"), index=False)
+        if len(waterbridge_df) > 0:
+            waterbridge_df.to_csv(os.path.join(interactions_dir, f"{input_stem}_WB.csv"), index=False)
+        if len(halogen_df) > 0:
+            halogen_df.to_csv(os.path.join(interactions_dir, f"{input_stem}_XB.csv"), index=False)
+        if len(metal_df) > 0:
+            metal_df.to_csv(os.path.join(interactions_dir, f"{input_stem}_MC.csv"), index=False)
 
     with open(file_prot,"r") as f:
         pdb = f.readlines()
@@ -1085,7 +1156,18 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
     for entry in atom_info:
         coord_dict[entry[3]] = (entry[0],entry[1])
 
-    interactions, centroids, used_res = _get_interactions(input_pdb, hydrophobic_df, hbond_df, pi_stacking_df, pi_cation_df, saltbridge_df, coord_dict)
+    interactions, centroids, used_res = _get_interactions(
+        input_pdb,
+        hydrophobic_df,
+        hbond_df,
+        pi_stacking_df,
+        pi_cation_df,
+        saltbridge_df,
+        waterbridge_df,
+        halogen_df,
+        metal_df,
+        coord_dict,
+    )
 
     res_info = _get_res_info(used_res, coord_dict, interactions)
 
@@ -1131,6 +1213,9 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
         ("PS",  "π-Stacking",  (0.0, 0.6, 0.0)),
         ("PC",  "π-Cation",    (1.0, 0.7, 0.0)),
         ("SB",  "Salt bridge", (1.0, 0.0, 1.0)),
+        ("WB",  "Water bridge", (0.08, 0.58, 0.72)),
+        ("XB",  "Halogen bond", (0.48, 0.36, 0.78)),
+        ("MC",  "Metal coordination", (0.64, 0.34, 0.00)),
     ]
 
     present_interactions = {
@@ -1255,6 +1340,9 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
         "pi_stacking_df": pi_stacking_df,
         "pi_cation_df": pi_cation_df,
         "saltbridge_df": saltbridge_df,
+        "waterbridge_df": waterbridge_df,
+        "halogen_df": halogen_df,
+        "metal_df": metal_df,
         "binding_site_dir": os.path.abspath(binding_site_dir),
         "figures_dir": os.path.abspath(figures_dir),
         "interactions_dir": os.path.abspath(interactions_dir),
