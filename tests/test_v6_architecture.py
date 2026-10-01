@@ -3,6 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 import scientific_records
+import utils
 from panviz_version import PANVIZ_VERSION
 
 
@@ -164,3 +165,86 @@ def test_figure_record_labels_cover_new_interaction_classes():
         "Halogen bond",
         "Metal coordination",
     ]
+
+
+class _FakeResidue:
+    def GetAtomID(self, atom):
+        return atom.name
+
+
+class _FakeOBAtom:
+    def __init__(self, name):
+        self.name = name
+        self._residue = _FakeResidue()
+
+    def GetResidue(self):
+        return self._residue
+
+
+class _FakePybelAtom:
+    def __init__(self, name):
+        self.OBAtom = _FakeOBAtom(name)
+
+
+class _FakeInputPDB:
+    def __init__(self, names):
+        self.atoms = [_FakePybelAtom(name) for name in names]
+
+
+def test_new_interaction_classes_map_to_ligand_side_atoms():
+    input_pdb = _FakeInputPDB(["C1", "O2", "CL1", "ZN1", "N5"])
+    coord_dict = {
+        "C1": (0.0, 0.0),
+        "O2": (1.0, 0.0),
+        "CL1": (2.0, 0.0),
+        "ZN1": (3.0, 0.0),
+        "N5": (4.0, 0.0),
+    }
+
+    hydrophobic = pd.DataFrame(columns=["LIGCARBONIDX", "RESTYPE", "RESNR", "RESCHAIN"])
+    hbond = pd.DataFrame()
+    pi_stack = pd.DataFrame(columns=["LIG_IDX_LIST", "RESTYPE", "RESNR", "RESCHAIN"])
+    pi_cation = pd.DataFrame(columns=["LIG_IDX_LIST", "RESTYPE", "RESNR", "RESCHAIN"])
+    saltbridge = pd.DataFrame(columns=["LIG_IDX_LIST", "RESTYPE", "RESNR", "RESCHAIN"])
+
+    waterbridge = pd.DataFrame([{
+        "PROTISDON": True,
+        "ACCEPTOR_IDX": 2,
+        "DONOR_IDX": 5,
+        "DIST_A-W": 2.70,
+        "DIST_D-W": 2.95,
+        "RESTYPE": "SER",
+        "RESNR": 79,
+        "RESCHAIN": "A",
+    }])
+    halogen = pd.DataFrame([{
+        "DON_IDX": 3,
+        "DIST": 3.30,
+        "RESTYPE": "ASN",
+        "RESNR": 76,
+        "RESCHAIN": "A",
+    }])
+    metal = pd.DataFrame([{
+        "METAL_IDX": 4,
+        "DIST": 2.15,
+        "RESTYPE": "HIS",
+        "RESNR": 88,
+        "RESCHAIN": "A",
+    }])
+
+    rows, _centroids, _residues = utils._get_interactions(
+        input_pdb,
+        hydrophobic,
+        hbond,
+        pi_stack,
+        pi_cation,
+        saltbridge,
+        waterbridge,
+        halogen,
+        metal,
+        coord_dict,
+    )
+
+    assert ("O2", "SER79_A", "WB", 2.70) in rows
+    assert ("CL1", "ASN76_A", "XB", 3.30) in rows
+    assert ("ZN1", "HIS88_A", "MC", 2.15) in rows
