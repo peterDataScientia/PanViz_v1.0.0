@@ -460,26 +460,77 @@ render_editor(result["scene"])
 st.caption("v5.8.6: the imported molecular structure and PLIP scientific records are immutable; only the separate presentation annotation layer can be edited, saved, reloaded, and exported.")
 st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown('<div class="panviz-section"><h4>4 · Project downloads</h4>', unsafe_allow_html=True)
-b1,b2,b3=st.columns(3)
-with b1:st.download_button("Download original PNG",data=png_path.read_bytes(),file_name=f"{source_stem}_PanViz.png",mime="image/png",use_container_width=True)
-with b2:st.download_button("Download original SVG",data=svg_path.read_bytes(),file_name=f"{source_stem}_PanViz.svg",mime="image/svg+xml",use_container_width=True)
-with b3:
-    zpath=Path(result["project_zip"])
-    st.download_button("Download complete project ZIP",data=zpath.read_bytes(),file_name=zpath.name,mime="application/zip",use_container_width=True)
-st.markdown("</div>", unsafe_allow_html=True)
-
-st.markdown('<div class="panviz-section"><h4>5 · Scientific records and prepared structure</h4>', unsafe_allow_html=True)
+st.markdown('<div class="panviz-section"><h4>4 · Scientific interaction records</h4>', unsafe_allow_html=True)
 rec1,rec2,rec3,rec4=st.columns(4)
 rec1.metric("Interactions",len(interaction_df));rec2.metric("Residues",interaction_df["Residue"].nunique() if not interaction_df.empty else 0);rec3.metric("Interaction types",interaction_df["Interaction"].nunique() if not interaction_df.empty else 0);rec4.metric("Binding sites",result["binding_site_count"])
+
 if not interaction_df.empty:
-    st.dataframe(interaction_df,use_container_width=True,hide_index=True)
-    st.download_button("Download interaction table (CSV)",data=interaction_df.to_csv(index=False).encode("utf-8"),file_name=f"{source_stem}_{selected_site.replace(':','_')}_interactions.csv",mime="text/csv",use_container_width=True)
+    st.dataframe(
+        interaction_df,
+        use_container_width=True,
+        hide_index=True,
+        height=min(720, max(320, 38 * (len(interaction_df) + 1))),
+    )
 else:
     st.info("No PLIP interaction records were returned for this binding site.")
-prepared=Path(result["prepared_pdb"])
-if prepared.exists():
-    st.download_button("Download PLIP-prepared PDB complex",data=prepared.read_bytes(),file_name=f"{source_stem}_{selected_site.replace(':','_')}_prepared.pdb",mime="chemical/x-pdb",use_container_width=True)
-st.download_button("Download initial editor layout JSON",data=json.dumps(result["scene"],indent=2,ensure_ascii=False).encode("utf-8"),file_name=f"{source_stem}_{selected_site.replace(':','_')}_initial_layout.json",mime="application/json",use_container_width=True)
-st.markdown('</div><div class="panviz-foot">PanViz v5.8.6 · one reusable PLIP analysis → original figures + locked molecular scene + editable presentation annotations + complete project package.</div>', unsafe_allow_html=True)
+
+with st.expander("Downloads & project files", expanded=False):
+    zpath=Path(result["project_zip"])
+    prepared=Path(result["prepared_pdb"])
+
+    d1,d2,d3=st.columns(3)
+    with d1:
+        st.download_button(
+            "Original PNG",
+            data=png_path.read_bytes(),
+            file_name=f"{source_stem}_PanViz.png",
+            mime="image/png",
+            use_container_width=True,
+        )
+    with d2:
+        st.download_button(
+            "Original SVG",
+            data=svg_path.read_bytes(),
+            file_name=f"{source_stem}_PanViz.svg",
+            mime="image/svg+xml",
+            use_container_width=True,
+        )
+    with d3:
+        st.download_button(
+            "Complete project ZIP",
+            data=zpath.read_bytes(),
+            file_name=zpath.name,
+            mime="application/zip",
+            use_container_width=True,
+        )
+
+    d4,d5,d6=st.columns(3)
+    with d4:
+        if not interaction_df.empty:
+            st.download_button(
+                "Interaction table CSV",
+                data=interaction_df.to_csv(index=False).encode("utf-8"),
+                file_name=f"{source_stem}_{selected_site.replace(':','_')}_interactions.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+    with d5:
+        if prepared.exists():
+            st.download_button(
+                "PLIP-prepared PDB",
+                data=prepared.read_bytes(),
+                file_name=f"{source_stem}_{selected_site.replace(':','_')}_prepared.pdb",
+                mime="chemical/x-pdb",
+                use_container_width=True,
+            )
+    with d6:
+        st.download_button(
+            "Initial layout JSON",
+            data=json.dumps(result["scene"],indent=2,ensure_ascii=False).encode("utf-8"),
+            file_name=f"{source_stem}_{selected_site.replace(':','_')}_initial_layout.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+
+st.markdown('</div><div class="panviz-foot">PanViz v5.8.6 · one reusable PLIP analysis → locked molecular scene + editable presentation annotations + scientific interaction records + complete project package.</div>', unsafe_allow_html=True)
 
