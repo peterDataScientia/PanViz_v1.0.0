@@ -19,9 +19,9 @@
 #pv-interaction-records .head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid #e5eaf1;background:#f8fafc}
 #pv-interaction-records .title{font-size:13px;font-weight:750;color:#1f2937}
 #pv-interaction-records .summary{font-size:11px;color:#64748b;font-weight:600}
-#pv-interaction-table-wrap{overflow-x:auto}
+#pv-interaction-table-wrap{overflow:auto;max-height:min(420px,45vh)}
 #pv-interaction-table{width:100%;border-collapse:collapse;font-size:12px}
-#pv-interaction-table th{padding:9px 11px;text-align:left;background:#f8fafc;color:#475569;font-weight:700;border-bottom:1px solid #e5e7eb;white-space:nowrap}
+#pv-interaction-table th{position:sticky;top:0;z-index:2;padding:9px 11px;text-align:left;background:#f8fafc;color:#475569;font-weight:700;border-bottom:1px solid #e5e7eb;white-space:nowrap}
 #pv-interaction-table td{padding:9px 11px;border-bottom:1px solid #eef1f5;color:#1f2937;vertical-align:middle}
 #pv-interaction-table tbody tr:last-child td{border-bottom:0}
 .pv-origin-badge{display:inline-block;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:750;white-space:nowrap}
