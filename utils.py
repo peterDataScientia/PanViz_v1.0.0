@@ -482,7 +482,11 @@ def _draw_mol(atom_info, connections, padding, canvas_height, canvas_width, out_
 
             ctx.set_source_rgba(color[0], color[1], color[2], 0.92)
             ctx.set_line_width(interaction_width)
-            ctx.set_dash([9, 5], 0)
+            ctx.set_dash({
+                "WB": [3, 3],
+                "XB": [6, 4],
+                "MC": [2, 3],
+            }.get(bond_type, [9, 5]), 0)
 
             dx, dy = x1 - x0, y1 - y0
             length = math.hypot(dx, dy)
@@ -1208,14 +1212,14 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
     # binding site.  Keep the order consistent with the interaction
     # vocabulary used by the renderer.
     legend_definitions = [
-        ("HPI", "Hydrophobic", (0.5, 0.5, 0.5)),
-        ("HB",  "H-bond",      (0.0, 0.0, 1.0)),
-        ("PS",  "π-Stacking",  (0.0, 0.6, 0.0)),
-        ("PC",  "π-Cation",    (1.0, 0.7, 0.0)),
-        ("SB",  "Salt bridge", (1.0, 0.0, 1.0)),
-        ("WB",  "Water bridge", (0.08, 0.58, 0.72)),
-        ("XB",  "Halogen bond", (0.48, 0.36, 0.78)),
-        ("MC",  "Metal coordination", (0.64, 0.34, 0.00)),
+        ("HPI", "Hydrophobic", (0.5, 0.5, 0.5), [10, 5]),
+        ("HB",  "H-bond",      (0.0, 0.0, 1.0), [10, 5]),
+        ("PS",  "π-Stacking",  (0.0, 0.6, 0.0), [10, 5]),
+        ("PC",  "π-Cation",    (1.0, 0.7, 0.0), [10, 5]),
+        ("SB",  "Salt bridge", (1.0, 0.0, 1.0), [10, 5]),
+        ("WB",  "Water bridge", (0.08, 0.58, 0.72), [3, 3]),
+        ("XB",  "Halogen bond", (0.48, 0.36, 0.78), [6, 4]),
+        ("MC",  "Metal coordination", (0.64, 0.34, 0.00), [2, 3]),
     ]
 
     present_interactions = {
@@ -1225,8 +1229,8 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
     }
 
     legend_items = [
-        (label, color)
-        for interaction_code, label, color in legend_definitions
+        (label, color, dash)
+        for interaction_code, label, color, dash in legend_definitions
         if interaction_code in present_interactions
     ]
 
@@ -1237,7 +1241,6 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
     # Legend defaults are intentionally bold and legible at publication scale.
     legend_font_size = 15 if canvas_height <= 800 else 17
     legend_line_width = 3
-    legend_dash = [10, 5]
 
     ctx.select_font_face(
         "Arial", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD
@@ -1255,11 +1258,11 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
 
         total_width = horizontal_padding * 2
 
-        for label, color in legend_items:
+        for label, color, dash in legend_items:
             ext = ctx.text_extents(label)
             text_width = ext[2]
             item_width = line_sample_width + line_to_text_gap + text_width
-            item_metrics.append((label, color, item_width, text_width))
+            item_metrics.append((label, color, dash, item_width, text_width))
             total_width += item_width
 
         total_width += item_gap * (len(legend_items) - 1)
@@ -1284,11 +1287,11 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
         cursor_x = legend_x + horizontal_padding
         baseline_y = box_y + vertical_padding + legend_font_size - 1
 
-        for label, color, item_width, text_width in item_metrics:
+        for label, color, dash, item_width, text_width in item_metrics:
             # Interaction sample.
             ctx.set_source_rgba(color[0], color[1], color[2], 0.8)
             ctx.set_line_width(legend_line_width)
-            ctx.set_dash(legend_dash, 0)
+            ctx.set_dash(dash, 0)
 
             line_y = baseline_y - legend_font_size * 0.38
             ctx.move_to(cursor_x, line_y)
