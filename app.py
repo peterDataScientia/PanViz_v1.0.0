@@ -536,7 +536,7 @@ with st.expander(
 ):
     if not scientific_df.empty:
         st.dataframe(
-            scientific_df[["Record ID","Residue","Interaction","Code","Distance (Å)","Renderer-supported class"]],
+            scientific_df[["Record ID","Residue","Interaction","Code","Distance (Å)"]],
             use_container_width=True,
             hide_index=True,
             height=min(520, max(240, 34 * (len(scientific_df) + 1))),
