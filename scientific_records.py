@@ -164,3 +164,62 @@ def write_scientific_exports(
         "json": str(unified_json),
         "signature": scientific_signature(records),
     }
+
+
+FIGURE_INTERACTION_LABELS = {
+    "HPI": "Hydrophobic",
+    "HB": "Hydrogen bond",
+    "SB": "Salt bridge",
+    "PS": "Pi-stacking",
+    "PC": "Pi-cation",
+}
+
+
+def build_figure_records(scene: dict) -> pd.DataFrame:
+    """Return the exact scientific records represented by the protected figure.
+
+    The count is derived from scene["scientificData"]["interactions"], which is
+    produced by the same protected interaction/layout pipeline used by the
+    publication figure. This deliberately avoids estimating figure counts from
+    the broader eight-class PLIP record table.
+    """
+    labels = {
+        str(item.get("id")): item
+        for item in scene.get("labels", [])
+    }
+    rows = []
+    scientific = scene.get("scientificData", {}).get("interactions", [])
+
+    for index, item in enumerate(scientific, start=1):
+        residue_obj = labels.get(str(item.get("residueId")), {})
+        residue = (
+            residue_obj.get("text")
+            or residue_obj.get("sourceResidue")
+            or item.get("residueId")
+            or "—"
+        )
+        code = str(item.get("type") or "")
+        rows.append(
+            {
+                "Figure record ID": item.get("id") or f"figure_{index}",
+                "Residue": residue,
+                "Interaction": FIGURE_INTERACTION_LABELS.get(code, code),
+                "Code": code,
+                "Ligand atom": item.get("anchorAtom"),
+                "Distance (Å)": item.get("originalDistance"),
+                "Multiplicity": int(item.get("multiplicity", 1) or 1),
+            }
+        )
+
+    return pd.DataFrame(
+        rows,
+        columns=[
+            "Figure record ID",
+            "Residue",
+            "Interaction",
+            "Code",
+            "Ligand atom",
+            "Distance (Å)",
+            "Multiplicity",
+        ],
+    )
