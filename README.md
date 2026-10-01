@@ -1,8 +1,17 @@
-# PanViz Interactive v5.8.7
+# PanViz Interactive v6.0.0
 
-PanViz is a PLIP-based protein–ligand interaction visualization workflow with a publication-oriented SVG editor. The scientific molecular layer is locked; presentation annotations are editable without changing the underlying PLIP interaction measurements.
+PanViz is a PLIP-based protein–ligand interaction visualization workflow with a publication-oriented interactive editor. PanViz 6 uses an independently implemented canonical scene engine: PLIP supplies scientific interaction records, while PanViz owns ligand depiction, layout, interaction routing, editing, and export. The scientific molecular/interaction layer is locked; presentation annotations are editable without changing the underlying PLIP measurements.
 
-## What is complete in v5.8.7
+### PanViz 6 engine principles
+- One PLIP analysis is normalized into a canonical immutable interaction model.
+- All eight PLIP interaction classes are supported in the canonical scene.
+- Ligand depiction does **not** call `DetermineBonds(..., charge=0)`, does not neutralize the molecule, and does not apply a separate neutral-pH transformation.
+- Open Babel interprets the source ligand records; RDKit performs deterministic 2D depiction of that graph.
+- Residues are placed by PanViz's deterministic radial constraint layout rather than the legacy grid-search renderer.
+- PNG/SVG and the interactive editor are generated from the same canonical scene.
+- Historical project lineage is documented in `PROVENANCE.md`.
+
+## PanViz 6.0.0 architecture
 
 ### Input
 - **PDB complex**: upload a complete protein–ligand `.pdb` complex.
@@ -17,9 +26,12 @@ PanViz is a PLIP-based protein–ligand interaction visualization workflow with 
 - Interaction records are preserved for:
   - Hydrophobic (HPI)
   - Hydrogen bond (HB)
+  - Water bridge (WB)
+  - Salt bridge (SB)
   - π-Stacking (PS)
   - π-Cation (PC)
-  - Salt bridge (SB)
+  - Halogen bond (XB)
+  - Metal coordination (MC)
 - Original interaction distances remain separate from editable display text.
 - Duplicate residue→ligand-atom interaction records remain separate and are automatically weighted by multiplicity.
 
@@ -53,7 +65,7 @@ These fields are not modified by presentation editing.
 - **Load layout** imports a previously saved layout and validates that the site and ligand atom fingerprint match before applying it.
 - **SVG** export is vector-first and excludes editor hit targets/UI.
 - **PNG** export supports 1×, 2×, 4×, and 6× raster scales.
-- **PDF** export uses the edited SVG scene through the browser print dialog.
+- **PDF** export converts the edited SVG scene directly to a downloadable vector PDF while preserving the PanViz canvas geometry.
 - The Streamlit application provides a **complete project ZIP** containing the uploaded source file(s), prepared PDB, original figures, interaction CSVs, initial editor layout, and machine-readable manifest.
 
 ## Project bundle layout
@@ -70,9 +82,12 @@ These fields are not modified by presentation editing.
 │   ├── interactions/
 │   │   ├── *_HPI.csv
 │   │   ├── *_HB.csv
+│   │   ├── *_WB.csv
+│   │   ├── *_SB.csv
 │   │   ├── *_PS.csv
 │   │   ├── *_PC.csv
-│   │   └── *_SB.csv
+│   │   ├── *_XB.csv
+│   │   └── *_MC.csv
 │   ├── structures/
 │   │   └── *_prot.pdb
 │   ├── PanViz_initial_layout.json
@@ -91,17 +106,19 @@ PyMOL is not required for the web editor path.
 
 ## Command-line renderer
 
-The legacy/CLI renderer remains available through `PanViz.py`:
+The command-line workflow uses the same PanViz 6 canonical engine:
 
 ```bash
-python PanViz.py -f complex.pdb -y --output_dir PanViz_results --no-pymol
+python PanViz.py -f complex.pdb --all --output-dir PanViz_results --width 1400 --height 1000
 ```
+
+To analyze one binding site, use `--site LIG:A:401`. The legacy `plip_2d_interactions` renderer API was removed in v6.0.0.
 
 ## Scientific-data policy
 
 PanViz is intentionally separated into a scientific data layer and a presentation layer. Styling operations change how a figure is drawn, not what PLIP measured. A saved layout therefore carries presentation state while the scientific interaction records remain immutable.
 
-### v5.8.7 professional object controls
+### v6.0.0 professional object controls
 PanViz uses a two-layer model: the imported molecular structure is immutable, while independent presentation objects behave like figure-editor objects.
 
 **Original molecular layer**
@@ -139,7 +156,7 @@ PanViz uses a two-layer model: the imported molecular structure is immutable, wh
 | `Ctrl+S` | Save layout JSON |
 | `Escape` | Close text editor / clear selection |
 
-### v5.8.7 presentation editing with immutable molecular structure
+### v6.0.0 presentation editing with immutable molecular structure
 The scientific molecular scene is rendered directly from the immutable atom/bond data. Original covalent bonds have no edit handles. Their only editor action is selecting them as a source for an independent graphical copy.
 
 A copied/new bond is not chemically linked to the original molecule. Its geometry and styling belong exclusively to the presentation layer, so endpoint dragging, copying, rotation, expansion, compression, or deletion cannot modify the molecular topology.
