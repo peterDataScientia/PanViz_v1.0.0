@@ -1,5 +1,8 @@
 # v6.0.0 — Architecture Upgrade + Eight-Class Interaction Rendering
 
+- Replaced the duplicate Streamlit interaction tables with one live interaction table inside the editor.
+- The live table combines immutable PLIP-detected interactions with editor-created interactions; manual rows are marked **Manually added**.
+- Removed separate static PNG/SVG download buttons from the Streamlit page; publication exports now come directly from the editor.
 - Promoted the application to PanViz 6.0.0 while preserving the approved ligand depiction, residue placement, typography, canvas balance, and the existing HPI/HB/SB/PS/PC visual styles from baseline commit `237db30af8639379ed3976657f9bbcce28110725`.
 - Extended only the interaction layer to render all eight PLIP classes, adding water bridges (WB), halogen bonds (XB), and metal coordination (MC) with distinct publication-style colors and dash patterns.
 - Added a canonical scientific-record layer that preserves all eight PLIP interaction classes and exports unified CSV/JSON records.
