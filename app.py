@@ -439,19 +439,33 @@ result_key=_sha256_bytes(json.dumps(result_key_payload,sort_keys=True).encode())
 
 if analyze:
     results_root=work_root/"PanViz_results";results_root.mkdir(parents=True,exist_ok=True)
-    with st.spinner("Running PLIP once and generating PanViz outputs…"):
+    with st.spinner("Running PLIP once and building the interactive editor…"):
         try:
-            analysis_obj=plip_2d_interactions(str(pdb_path),selected_site,save_files=True,save_pymol=False,canvas_height=int(out_height),canvas_width=int(out_width),out_name="PanViz_interactions.png",output_dir=str(results_root))
-            plip_2d_interactions(str(pdb_path),selected_site,save_files=True,save_pymol=False,canvas_height=int(out_height),canvas_width=int(out_width),out_name="PanViz_interactions.svg",output_dir=str(results_root),analysis=analysis_obj)
-            site_dir=results_root/selected_site.replace(":","_")
-            png_path=site_dir/"figures"/"PanViz_interactions.png";svg_path=site_dir/"figures"/"PanViz_interactions.svg";interaction_dir=site_dir/"interactions"
+            analysis_obj=plip_2d_interactions(
+                str(pdb_path),
+                selected_site,
+                save_files=False,
+                save_pymol=False,
+                canvas_height=int(out_height),
+                canvas_width=int(out_width),
+                output_dir=str(results_root),
+            )
+            site_dir=Path(analysis_obj["binding_site_dir"])
+            interaction_dir=Path(analysis_obj["interactions_dir"])
             scientific_df,scientific_tables=build_scientific_records(analysis_obj["my_interactions"])
             scientific_exports=write_scientific_exports(
                 scientific_df,
                 scientific_tables,
                 interaction_dir,
             )
-            scene,scene_root=build_editor_scene(str(pdb_path),selected_site,width=int(out_width),height=int(out_height),base_svg=svg_path.read_text(encoding="utf-8"),analysis=analysis_obj)
+            scene,scene_root=build_editor_scene(
+                str(pdb_path),
+                selected_site,
+                width=int(out_width),
+                height=int(out_height),
+                base_svg=None,
+                analysis=analysis_obj,
+            )
             figure_df=build_figure_records(scene)
             (site_dir/"PanViz_initial_layout.json").write_text(json.dumps(scene,indent=2,ensure_ascii=False),encoding="utf-8")
             result={
@@ -470,8 +484,6 @@ if analyze:
                 "interaction_df": figure_df,
                 "figure_interaction_df": figure_df,
                 "scientific_df": scientific_df,
-                "png_path": str(png_path),
-                "svg_path": str(svg_path),
                 "site_dir": str(site_dir),
                 "prepared_pdb": str(analysis_obj["file_prot"]),
                 "results_root": str(results_root),
@@ -488,7 +500,7 @@ if analyze:
             project_readme.write_text(
                 f"# PanViz {PANVIZ_VERSION} project bundle\n\n"
                 "This package contains the original uploaded input file(s), the PLIP-prepared complex, "
-                "original PanViz PNG/SVG figures, canonical PLIP scientific records, the initial editable layout, "
+                "canonical PLIP scientific records, the initial editable layout, "
                 "and a machine-readable manifest. Presentation styling in PanViz does not modify the underlying "
                 "PLIP scientific interaction records. Use the editor's **Save layout** and **Load layout** controls "
                 "to carry edited presentation state between sessions.\n",
