@@ -75,3 +75,16 @@ The following new interaction-only semantics are approved:
 - **MC — Metal coordination:** brown, compact-dashed.
 
 This extension is additive. It does not authorize unrelated changes to ligand structure rendering, residue layout, or the established five interaction styles.
+
+
+## Approved publication legend revision
+
+The publication legend is standardized as follows:
+
+- Canonical interaction order: HPI → HB → WB → SB → PS → PC → XB → MC.
+- Publication labels: Hydrophobic contact, Hydrogen bond, Water bridge, Salt bridge, π-Stacking, π-Cation, Halogen bond, Metal coordination.
+- Only interaction types present in the figure are shown.
+- The legend automatically wraps into centered multiple rows when a single row would exceed the publication canvas.
+- Maximum default legend width is constrained to the smaller of 900 px or the canvas width minus 80 px.
+- Existing interaction-line colors, widths, and dash semantics remain unchanged.
+- Manually added interaction types are inserted into the canonical scientific order unless the user explicitly reorders legend items.
