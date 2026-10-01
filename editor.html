@@ -664,8 +664,14 @@ function sceneSvg(){const c=svg.cloneNode(true);c.querySelector('#pv-selection')
 function download(name,type,data){const blob=data instanceof Blob?data:new Blob([data],{type});const a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);}
 async function exportPDF(){
   const filename=((state.site||'PanViz').replaceAll(':','_')+'_edited.pdf').replace(/[<>"']/g,'_');
-  const pageW=Math.max(1,Number(state.width)||1200);
-  const pageH=Math.max(1,Number(state.height)||850);
+
+  // Preserve the PanViz canvas exactly. SVG/CSS pixels are defined at 96 dpi,
+  // while PDF points are 72 per inch, so 1 px = 72/96 = 0.75 pt.
+  const canvasWpx=Math.max(1,Number(state.width)||1200);
+  const canvasHpx=Math.max(1,Number(state.height)||850);
+  const pxToPt=72/96;
+  const pdfW=canvasWpx*pxToPt;
+  const pdfH=canvasHpx*pxToPt;
 
   if(!window.jspdf||!window.jspdf.jsPDF){
     alert('PDF library did not load. Please refresh the PanViz page and try again.');
@@ -686,8 +692,8 @@ async function exportPDF(){
   holder.style.position='fixed';
   holder.style.left='-100000px';
   holder.style.top='0';
-  holder.style.width=pageW+'px';
-  holder.style.height=pageH+'px';
+  holder.style.width=canvasWpx+'px';
+  holder.style.height=canvasHpx+'px';
   holder.style.opacity='0';
   holder.style.pointerEvents='none';
   holder.innerHTML=svgMarkup;
@@ -700,29 +706,34 @@ async function exportPDF(){
     return;
   }
 
-  svgNode.setAttribute('width',String(pageW));
-  svgNode.setAttribute('height',String(pageH));
-  svgNode.setAttribute('viewBox',`0 0 ${pageW} ${pageH}`);
+  // Keep the original SVG coordinate system untouched.
+  svgNode.setAttribute('width',String(canvasWpx));
+  svgNode.setAttribute('height',String(canvasHpx));
+  svgNode.setAttribute('viewBox',`0 0 ${canvasWpx} ${canvasHpx}`);
+  svgNode.setAttribute('preserveAspectRatio','xMinYMin meet');
 
   const {jsPDF}=window.jspdf;
   const pdf=new jsPDF({
-    orientation:pageW>=pageH?'landscape':'portrait',
+    orientation:pdfW>=pdfH?'landscape':'portrait',
     unit:'pt',
-    format:[pageW,pageH],
+    format:[pdfW,pdfH],
     compress:true,
     putOnlyUsedFonts:true
   });
 
   try{
-    status.textContent='Generating vector PDF…';
+    status.textContent='Generating exact-size vector PDF…';
     await pdf.svg(svgNode,{
       x:0,
       y:0,
-      width:pageW,
-      height:pageH
+      width:pdfW,
+      height:pdfH,
+      preserveAspectRatio:'xMinYMin meet'
     });
     pdf.save(filename);
-    status.textContent='PDF downloaded: '+filename;
+    status.textContent=
+      'PDF downloaded at exact PanViz canvas size ('+
+      canvasWpx+'×'+canvasHpx+' px).';
   }catch(err){
     console.error('PanViz PDF export failed',err);
     alert('PDF export failed: '+(err&&err.message?err.message:String(err)));
