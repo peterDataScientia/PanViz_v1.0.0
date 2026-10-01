@@ -65,7 +65,8 @@ def test_editor_remains_scrollable_below_figure():
 
 def test_live_interaction_table_has_vertical_scroll_fallback():
     editor = Path("editor.html").read_text(encoding="utf-8")
-    assert "#pv-interaction-table-wrap{overflow:auto;max-height:min(420px,45vh)}" in editor
+    assert "#pv-interaction-table-wrap{display:none;overflow:auto;max-height:min(420px,45vh)}" in editor
+    assert "#pv-interaction-records.open #pv-interaction-table-wrap{display:block}" in editor
     assert "#pv-interaction-table th{position:sticky;top:0;" in editor
 
 
