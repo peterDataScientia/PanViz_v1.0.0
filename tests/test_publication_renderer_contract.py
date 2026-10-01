@@ -101,6 +101,9 @@ def test_static_publication_renderer_style_contract_is_unchanged():
         '"PS": 10',
         '"PC": -10',
         '"SB": -5',
+        '"WB": 4',
+        '"XB": -8',
+        '"MC": 8',
         'ctx.set_source_rgb(0.82, 0.0, 0.58)',
     ]
     for rule in required_visual_rules:
@@ -114,6 +117,9 @@ def test_editor_geometry_uses_same_approved_visual_vocabulary():
         "PS": "#008500",
         "PC": "#E08000",
         "SB": "#D900B0",
+        "WB": "#1596B8",
+        "XB": "#7A5CC7",
+        "MC": "#A45700",
     }
     assert interactive_engine.BUBBLE_COLOR == "#0AFFEF"
     assert interactive_engine.NONCOVALENT_COLOR == "#595959"
@@ -124,3 +130,12 @@ def test_visual_renderer_files_exist_and_legacy_geometry_is_active():
     assert Path("interactive_engine.py").exists()
     assert hasattr(utils, "_draw_mol")
     assert hasattr(interactive_engine, "_exact_panviz_layout")
+
+
+def test_all_eight_plip_interaction_classes_are_supported():
+    assert interactive_engine.INTERACTION_TYPES == {
+        "HPI", "HB", "WB", "SB", "PS", "PC", "XB", "MC"
+    }
+    assert interactive_engine.INTERACTION_LABELS["WB"] == "Water bridge"
+    assert interactive_engine.INTERACTION_LABELS["XB"] == "Halogen bond"
+    assert interactive_engine.INTERACTION_LABELS["MC"] == "Metal coordination"
