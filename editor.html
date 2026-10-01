@@ -1,3 +1,5 @@
+<script src="https://unpkg.com/jspdf@4.2.1/dist/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/svg2pdf.js@2.8.1/dist/svg2pdf.umd.min.js"></script>
 <div id="pv-root">
 <style>
 #pv-root{font-family:Inter,Segoe UI,Arial,Helvetica,sans-serif;color:#152033;background:linear-gradient(180deg,#f7f9fc 0%,#ffffff 34%)}
@@ -660,31 +662,74 @@ function clearSelection(){selectedItems=[];selected=null;drag=null;ribbon.style.
 function stripPrivate(x){for(const k of Object.keys(x)){if(k.startsWith('_'))delete x[k];}return x;}
 function sceneSvg(){const c=svg.cloneNode(true);c.querySelector('#pv-selection')?.remove();c.querySelector('#pv-ui')?.remove();c.querySelector('#pv-molecule-copy-targets')?.remove();c.querySelectorAll('.pv-hit,.pv-copy-hit').forEach(n=>n.remove());c.querySelectorAll('[class="pv-locked"]')?.forEach(n=>n.removeAttribute('class'));c.querySelectorAll('[vector-effect]').forEach(n=>n.removeAttribute('vector-effect'));c.setAttribute('xmlns','http://www.w3.org/2000/svg');c.setAttribute('width',state.width);c.setAttribute('height',state.height);c.setAttribute('viewBox',`0 0 ${state.width} ${state.height}`);c.setAttribute('shape-rendering','geometricPrecision');const bg=el('rect',{x:0,y:0,width:state.width,height:state.height,fill:'#fff'});c.insertBefore(bg,c.firstChild);return '<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(c);}
 function download(name,type,data){const blob=data instanceof Blob?data:new Blob([data],{type});const a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);}
-function exportPDF(){
-  const title=((state.site||'PanViz').replaceAll(':','_')+'_edited').replace(/[<>"']/g,'_');
+async function exportPDF(){
+  const filename=((state.site||'PanViz').replaceAll(':','_')+'_edited.pdf').replace(/[<>"']/g,'_');
   const pageW=Math.max(1,Number(state.width)||1200);
   const pageH=Math.max(1,Number(state.height)||850);
-  const svgMarkup=sceneSvg().replace(/^<\\?xml[^>]*>\\s*/,'');
-  const markup='<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title>'+
-    '<style>'+
-    '@page{size:'+pageW+'px '+pageH+'px;margin:0}'+
-    'html,body{margin:0;padding:0;background:#fff;width:'+pageW+'px;height:'+pageH+'px;overflow:hidden}'+
-    'body{display:block}'+
-    'svg{display:block;width:'+pageW+'px!important;height:'+pageH+'px!important;max-width:none!important;max-height:none!important}'+
-    '@media print{html,body{margin:0!important;padding:0!important;width:'+pageW+'px!important;height:'+pageH+'px!important;overflow:hidden!important}svg{width:'+pageW+'px!important;height:'+pageH+'px!important}}'+
-    '</style></head><body>'+svgMarkup+
-    '<script>window.addEventListener("load",function(){setTimeout(function(){window.focus();window.print();},350);});<\\/script>'+
-    '</body></html>';
-  const blob=new Blob([markup],{type:'text/html;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const w=window.open(url,'_blank');
-  if(!w){
-    URL.revokeObjectURL(url);
-    alert('Pop-up blocking prevented PDF export. Please allow pop-ups for PanViz.');
+
+  if(!window.jspdf||!window.jspdf.jsPDF){
+    alert('PDF library did not load. Please refresh the PanViz page and try again.');
     return;
   }
-  status.textContent='PDF print view opened. Choose “Save as PDF” in the browser print dialog.';
-  setTimeout(()=>URL.revokeObjectURL(url),60000);
+
+  const svg2pdfReady =
+    typeof window.svg2pdf === 'function' ||
+    typeof window.jspdf.jsPDF.API.svg === 'function';
+
+  if(!svg2pdfReady){
+    alert('SVG-to-PDF library did not load. Please refresh the PanViz page and try again.');
+    return;
+  }
+
+  const svgMarkup=sceneSvg().replace(/^<\\?xml[^>]*>\\s*/,'');
+  const holder=document.createElement('div');
+  holder.style.position='fixed';
+  holder.style.left='-100000px';
+  holder.style.top='0';
+  holder.style.width=pageW+'px';
+  holder.style.height=pageH+'px';
+  holder.style.opacity='0';
+  holder.style.pointerEvents='none';
+  holder.innerHTML=svgMarkup;
+  document.body.appendChild(holder);
+
+  const svgNode=holder.querySelector('svg');
+  if(!svgNode){
+    holder.remove();
+    alert('PanViz could not prepare the SVG for PDF export.');
+    return;
+  }
+
+  svgNode.setAttribute('width',String(pageW));
+  svgNode.setAttribute('height',String(pageH));
+  svgNode.setAttribute('viewBox',`0 0 ${pageW} ${pageH}`);
+
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({
+    orientation:pageW>=pageH?'landscape':'portrait',
+    unit:'pt',
+    format:[pageW,pageH],
+    compress:true,
+    putOnlyUsedFonts:true
+  });
+
+  try{
+    status.textContent='Generating vector PDF…';
+    await pdf.svg(svgNode,{
+      x:0,
+      y:0,
+      width:pageW,
+      height:pageH
+    });
+    pdf.save(filename);
+    status.textContent='PDF downloaded: '+filename;
+  }catch(err){
+    console.error('PanViz PDF export failed',err);
+    alert('PDF export failed: '+(err&&err.message?err.message:String(err)));
+    status.textContent='PDF export failed.';
+  }finally{
+    holder.remove();
+  }
 }
 
 function addNote(){pushUndo();const id='note_'+Date.now();const o={id,text:'Text',x:state.width/2,y:state.height/2,w:90,h:24,fontSize:Number(state.style.note?.fontSize||18),fontFamily:state.style.note?.fontFamily||'Arial',fontWeight:Number(state.style.note?.fontWeight||400),textColor:state.style.note?.textColor||'#111111',backgroundColor:state.style.note?.backgroundColor||'#ffffff',backgroundOpacity:Number(state.style.note?.backgroundOpacity??0.92),backgroundEnabled:true,italic:false,underline:false,rotation:0,visible:true};measure(o,o.text);o._originX=o.x;o._originY=o.y;state.notes.push(o);setSelectedRef('note',id,false);renderAnnotations();renderSelection();showRibbon();openTextEditor();}
