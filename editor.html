@@ -19,7 +19,10 @@
 #pv-interaction-records .head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid #e5eaf1;background:#f8fafc}
 #pv-interaction-records .title{font-size:13px;font-weight:750;color:#1f2937}
 #pv-interaction-records .summary{font-size:11px;color:#64748b;font-weight:600}
-#pv-interaction-table-wrap{overflow:auto;max-height:min(420px,45vh)}
+#pv-interaction-toggle{border:1px solid #cfd8e5;background:#fff;border-radius:7px;padding:6px 9px;font-size:11px;font-weight:700;color:#1f2937;cursor:pointer;white-space:nowrap}
+#pv-interaction-toggle:hover{background:#eef4ff;border-color:#b9c9e6}
+#pv-interaction-table-wrap{display:none;overflow:auto;max-height:min(420px,45vh)}
+#pv-interaction-records.open #pv-interaction-table-wrap{display:block}
 #pv-interaction-table{width:100%;border-collapse:collapse;font-size:12px}
 #pv-interaction-table th{position:sticky;top:0;z-index:2;padding:9px 11px;text-align:left;background:#f8fafc;color:#475569;font-weight:700;border-bottom:1px solid #e5e7eb;white-space:nowrap}
 #pv-interaction-table td{padding:9px 11px;border-bottom:1px solid #eef1f5;color:#1f2937;vertical-align:middle}
@@ -130,10 +133,13 @@
 </div>
 <div id="pv-interaction-records">
   <div class="head">
-    <div class="title">Interaction records</div>
-    <div id="pv-interaction-summary" class="summary"></div>
+    <div>
+      <div class="title">Interaction records</div>
+      <div id="pv-interaction-summary" class="summary"></div>
+    </div>
+    <button id="pv-interaction-toggle" type="button" aria-expanded="false">Show interaction records</button>
   </div>
-  <div id="pv-interaction-table-wrap">
+  <div id="pv-interaction-table-wrap" aria-hidden="true">
     <table id="pv-interaction-table">
       <thead><tr><th>#</th><th>Residue</th><th>Interaction</th><th>Ligand atom</th><th>Distance (Å)</th><th>Origin</th></tr></thead>
       <tbody id="pv-interaction-table-body"></tbody>
@@ -153,8 +159,11 @@ const ribbon=document.getElementById('pv-ribbon');
 const editPop=document.getElementById('pv-edit-pop');
 const editInput=document.getElementById('pv-edit-input');
 const status=document.getElementById('pv-status');
+const interactionRecords=document.getElementById('pv-interaction-records');
+const interactionTableWrap=document.getElementById('pv-interaction-table-wrap');
 const interactionTableBody=document.getElementById('pv-interaction-table-body');
 const interactionSummary=document.getElementById('pv-interaction-summary');
+const interactionToggle=document.getElementById('pv-interaction-toggle');
 function requestHostResize(){
   const report=()=>{
     const root=document.getElementById('pv-root');
@@ -172,6 +181,15 @@ function requestHostResize(){
     },'*');
   };
   requestAnimationFrame(()=>{report();setTimeout(report,40);});
+}
+if(interactionToggle){
+  interactionToggle.addEventListener('click',()=>{
+    const isOpen=interactionRecords.classList.toggle('open');
+    interactionToggle.textContent=isOpen?'Hide interaction records':'Show interaction records';
+    interactionToggle.setAttribute('aria-expanded',String(isOpen));
+    interactionTableWrap.setAttribute('aria-hidden',String(!isOpen));
+    requestHostResize();
+  });
 }
 const cw=document.getElementById('pv-canvas-w'), ch=document.getElementById('pv-canvas-h');
 const bondWidth=document.getElementById('pv-bond-width'), bondWidthValue=document.getElementById('pv-bond-width-value');
