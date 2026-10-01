@@ -162,11 +162,15 @@ except Exception:
     log("CHECKPOINT 11 — optional visualization bridge unavailable; continuing")
 
 
-run_checkpoint(12, "PanViz utils.py", lambda: importlib.import_module("utils"))
+run_checkpoint(
+    12,
+    "PanViz independent canonical engine",
+    lambda: importlib.import_module("panviz_engine"),
+)
 run_checkpoint(
     13,
-    "PanViz interactive_engine.py",
-    lambda: importlib.import_module("interactive_engine"),
+    "CairoSVG static export dependency",
+    lambda: importlib.import_module("cairosvg"),
 )
 
 
