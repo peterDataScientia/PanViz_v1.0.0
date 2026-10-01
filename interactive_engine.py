@@ -24,6 +24,7 @@ from plip.structure.preparation import PDBComplex
 from plip.exchange.report import BindingSiteReport
 
 INTERACTION_TYPES = {"HPI", "HB", "PS", "PC", "SB", "WB", "XB", "MC"}
+INTERACTION_ORDER = ("HPI", "HB", "WB", "SB", "PS", "PC", "XB", "MC")
 # Interaction colors retain the original PanViz semantic mapping.
 # RGB(10, 255, 239) is reserved for the optional 3D glass-bubble residue node.
 BUBBLE_COLOR = "#0AFFEF"  # RGB(10, 255, 239)
@@ -39,12 +40,12 @@ INTERACTION_COLORS = {
     "MC": "#A45700",   # Metal coordination
 }
 INTERACTION_LABELS = {
-    "HPI": "Hydrophobic",
-    "HB": "H-bond",
+    "HPI": "Hydrophobic contact",
+    "HB": "Hydrogen bond",
+    "WB": "Water bridge",
+    "SB": "Salt bridge",
     "PS": "π-Stacking",
     "PC": "π-Cation",
-    "SB": "Salt bridge",
-    "WB": "Water bridge",
     "XB": "Halogen bond",
     "MC": "Metal coordination",
 }
@@ -577,25 +578,19 @@ def build_editor_scene(pdb_file, bsid, width=1200, height=850, base_svg=None, an
                 "visible": True,
             })
 
-    present_types = []
-    for it in interactions:
-        if it["type"] not in present_types:
-            present_types.append(it["type"])
+    present_types = {it["type"] for it in interactions}
     legend_items = [
         {"type": k, "label": INTERACTION_LABELS[k], "color": INTERACTION_COLORS[k]}
-        for k in present_types
-        if k in INTERACTION_TYPES
+        for k in INTERACTION_ORDER
+        if k in present_types
     ]
-    # Publication-friendly legend: larger, bold, and padded for legibility.
+    # Publication-friendly legend: bold, canonical order, and multi-row capable.
+    # Exact wrapping is measured by the editor so long eight-class legends
+    # never extend beyond the publication canvas.
     legend_font_size = 15 if height <= 800 else 17
-    item_gap = 24
-    sample_width = 32
-    text_gap = 8
-    horizontal_padding = 12
-    vertical_padding = 8
-    estimated_item_widths = [sample_width + text_gap + max(54, 8.4 * len(x["label"])) for x in legend_items]
-    legend_w = sum(estimated_item_widths) + item_gap * max(0, len(legend_items) - 1) + horizontal_padding * 2
-    legend_h = legend_font_size + vertical_padding * 2 + 4
+    max_legend_width = max(260.0, min(float(width) - 80.0, 900.0))
+    legend_w = min(max_legend_width, max(100.0, max_legend_width))
+    legend_h = float(legend_font_size + 20)
     legend = {
         "x": float(width / 2.0),
         "y": float(height - 28.0),
