@@ -9,11 +9,11 @@ from plip.exchange.report import BindingSiteReport
 
 INTERACTION_CLASSES = {
     "HPI": ("hydrophobic", "Hydrophobic"),
-    "HB": ("hbond", "Hydrogen bond"),
+    "HB": ("hbond", "H-bond"),
     "WB": ("waterbridge", "Water bridge"),
     "SB": ("saltbridge", "Salt bridge"),
-    "PS": ("pistacking", "Pi-stacking"),
-    "PC": ("pication", "Pi-cation"),
+    "PS": ("pistacking", "π-Stacking"),
+    "PC": ("pication", "π-Cation"),
     "XB": ("halogen", "Halogen bond"),
     "MC": ("metal", "Metal coordination"),
 }
@@ -168,11 +168,11 @@ def write_scientific_exports(
 
 FIGURE_INTERACTION_LABELS = {
     "HPI": "Hydrophobic",
-    "HB": "Hydrogen bond",
+    "HB": "H-bond",
     "WB": "Water bridge",
     "SB": "Salt bridge",
-    "PS": "Pi-stacking",
-    "PC": "Pi-cation",
+    "PS": "π-Stacking",
+    "PC": "π-Cation",
     "XB": "Halogen bond",
     "MC": "Metal coordination",
 }
