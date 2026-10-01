@@ -425,6 +425,7 @@ st.caption("One PLIP analysis is reused for the original figures and the interac
 st.markdown("</div>", unsafe_allow_html=True)
 
 result_key_payload = {
+    "panviz_version": PANVIZ_VERSION,
     "mode": input_mode,
     "source_hashes": [_sha256_bytes(x[1]) for x in source_payloads],
     "pose": pose_index,
