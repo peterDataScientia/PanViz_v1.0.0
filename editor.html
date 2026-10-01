@@ -253,7 +253,7 @@ function migrate(s){
   if(s.legend._originX==null)s.legend._originX=Number(s.legend.x)-legacyDx;
   if(s.legend._originY==null)s.legend._originY=Number(s.legend.y)-legacyDy;
   if(legacyDx||legacyDy){s.legend.x=Number(s.legend._originX)+legacyDx;s.legend.y=Number(s.legend._originY)+legacyDy;s.legend.dx=0;s.legend.dy=0;}
-  s.legend.rotation=Number(s.legend.rotation||0);s.legend.fontSize=Math.max(15,Number(s.legend.fontSize||14));s.legend.bold=s.legend.bold!==false;s.legend.italic=!!s.legend.italic;s.legend.underline=!!s.legend.underline;s.legend.visible=s.legend.visible!==false;s.legend._originX=Number(s.legend._originX??s.legend.x);s.legend._originY=Number(s.legend._originY??s.legend.y);s.legend.backgroundColor=s.legend.backgroundColor||'#ffffff';s.legend.backgroundOpacity=Number(s.legend.backgroundOpacity??0.98);s.legend.borderColor=s.legend.borderColor||'#111111';s.legend.borderWidth=Number(s.legend.borderWidth??1.35);s.legend.textColor=s.legend.textColor||'#111111';s.legend.cornerRadius=Number(s.legend.cornerRadius??4);s.legend.items=Array.isArray(s.legend.items)?s.legend.items:[];s.legend.items.forEach((it,i)=>{it.id=it.id||`legend_item_${i}`;it.type=it.type||'CUSTOM';it.label=String(it.label||'Legend item');it.color=it.color||legendTypeDefaults(it.type).color;it.lineWidth=Number(it.lineWidth??legendTypeDefaults(it.type).lineWidth);it.dash=it.dash??legendTypeDefaults(it.type).dash;it.visible=it.visible!==false;});measureLegend(s.legend);
+  s.legend.rotation=Number(s.legend.rotation||0);s.legend.fontSize=Math.max(15,Number(s.legend.fontSize||14));s.legend.bold=s.legend.bold!==false;s.legend.italic=!!s.legend.italic;s.legend.underline=!!s.legend.underline;s.legend.visible=s.legend.visible!==false;s.legend._originX=Number(s.legend._originX??s.legend.x);s.legend._originY=Number(s.legend._originY??s.legend.y);s.legend.backgroundColor=s.legend.backgroundColor||'#ffffff';s.legend.backgroundOpacity=Number(s.legend.backgroundOpacity??0.98);s.legend.borderColor=s.legend.borderColor||'#111111';s.legend.borderWidth=Number(s.legend.borderWidth??1.35);s.legend.textColor=s.legend.textColor||'#111111';s.legend.cornerRadius=Number(s.legend.cornerRadius??4);s.legend.items=Array.isArray(s.legend.items)?s.legend.items:[];s.legend.items.forEach((it,i)=>{it.id=it.id||`legend_item_${i}`;it.type=it.type||'CUSTOM';it.label=String(it.label||'Legend item');it.color=it.color||legendTypeDefaults(it.type).color;it.lineWidth=Number(it.lineWidth??legendTypeDefaults(it.type).lineWidth);it.dash=it.dash??legendTypeDefaults(it.type).dash;it.visible=it.visible!==false;});measureLegend(s.legend,s.width);
   return s;
 }
 function el(tag,attrs={}){const n=document.createElementNS(NS,tag);for(const[k,v]of Object.entries(attrs))n.setAttribute(k,v);return n;}
@@ -638,10 +638,11 @@ function updateSelectedInteractionDom(){const z=currentSelection();if(!z||z.kind
 function toggleTextStyle(prop){const z=currentSelection();if(!z)return;pushUndo();z.obj[prop]=!z.obj[prop];z.obj.styleOverrides=z.obj.styleOverrides||{};if(prop==='bold')z.obj.styleOverrides.fontWeight=z.obj.bold?700:400;measure(z.obj,z.kind==='label'?z.obj.text:z.obj.displayText);renderAnnotations();renderSelection();showRibbon();positionRibbon();}
 function setFontSize(v){const z=currentSelection();if(!z||!(z.kind==='label'||z.kind==='distance'||z.kind==='note'))return;pushUndo();z.obj.fontSize=clamp(Number(v)||16,6,72);z.obj.styleOverrides=z.obj.styleOverrides||{};z.obj.styleOverrides.fontSize=z.obj.fontSize;measure(z.obj,z.kind==='label'?z.obj.text:z.obj.displayText);renderAnnotations();renderSelection();showRibbon();positionRibbon();}
 function changeFont(delta){const z=currentSelection();if(!z||!(z.kind==='label'||z.kind==='distance'||z.kind==='note'))return;setFontSize((z.obj.fontSize||16)+delta);}
-function legendLayout(l){
+function legendLayout(l,canvasWidth=null){
   const fs=Number(l?.fontSize||14),charW=Math.max(7,fs*.56),sample=34,textGap=9,itemGap=24,hPad=12,vPad=8,rowGap=7,lineH=fs+6;
   const items=(l?.items||[]).filter(it=>it.visible!==false);
-  const maxW=Math.max(260,Math.min(Number(state.width||1200)-80,900));
+  const width=Number(canvasWidth??l?._canvasWidth??initial?.width??1200);
+  const maxW=Math.max(260,Math.min(width-80,900));
   const maxContent=Math.max(100,maxW-hPad*2);
   const rows=[];let row=[],rowW=0;
   for(const item of items){
@@ -656,7 +657,7 @@ function legendLayout(l){
   const h=Math.max(28,rows.length?rows.length*lineH+(rows.length-1)*rowGap+vPad*2:fs+16);
   return{fs,sample,textGap,itemGap,hPad,vPad,rowGap,lineH,rows,w,h};
 }
-function measureLegend(l){if(!l)return;const g=legendLayout(l);l.w=g.w;l.h=g.h;}
+function measureLegend(l,canvasWidth=null){if(!l)return;if(canvasWidth!=null)l._canvasWidth=Number(canvasWidth);const g=legendLayout(l,canvasWidth);l.w=g.w;l.h=g.h;}
 function setLegendFont(v){if(!state.legend)return;pushUndo();state.legend.fontSize=clamp(Number(v)||14,6,40);measureLegend(state.legend);renderAnnotations();renderSelection();showRibbon();positionRibbon();}
 function rotateSelected(delta){const z=currentSelection();if(!z)return;if(z.kind==='bond'&&isProtectedMolecularBond(z.obj)){status.textContent='Molecular structure is read-only. Copy the bond first.';return;}pushUndo();z.obj.rotation=normAngle(Number(z.obj.rotation||0)+delta);if(z.kind==='interaction')renderAnnotations();else renderAnnotations();renderSelection();showRibbon();positionRibbon();}
 function beginRotate(evt,kind,id){
