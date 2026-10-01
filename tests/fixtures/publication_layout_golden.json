@@ -1,0 +1,19 @@
+{
+  "canvas": {"width": 1200, "height": 850},
+  "font_sizes": {"residue": 21, "distance": 15},
+  "residues": [
+    {"text": "GLY216_A", "x": 600.0, "y": 59.0, "anchorX": 600.0, "anchorY": 35.0, "leader": false},
+    {"text": "ASP34_A", "x": 157.904449, "y": 755.184913, "anchorX": 174.545455, "anchorY": 744.090909, "leader": false},
+    {"text": "TYR192_A", "x": 1040.818971, "y": 827.803688, "anchorX": 1025.454545, "anchorY": 815.0, "leader": false}
+  ],
+  "interactions": [
+    {"index": 2, "row_idx": 0, "type": "HB", "x1": 596.671799, "y1": 455.462244, "x2": 174.545455, "y2": 744.090909, "distance": 2.8},
+    {"index": 3, "row_idx": 1, "type": "PS", "x1": 596.837722, "y1": 682.668651, "x2": 1025.454545, "y2": 815.0, "distance": 4.72},
+    {"index": 4, "row_idx": 2, "type": "HPI", "x1": 812.727273, "y1": 460.454545, "x2": 600.0, "y2": 35.0, "distance": 3.61}
+  ],
+  "distance_labels": [
+    {"index": 2, "type": "HB", "x": 387.272727, "y": 602.272727, "text": "2.80 Å"},
+    {"index": 3, "type": "PS", "x": 812.727273, "y": 744.090909, "text": "4.72 Å"},
+    {"index": 4, "type": "HPI", "x": 706.363636, "y": 247.727273, "text": "3.61 Å"}
+  ]
+}
