@@ -69,10 +69,57 @@ print(f"APPCHK 15 — editor.html read OK ({len(EDITOR_HTML)} chars)", flush=Tru
 
 def render_editor(scene):
     html = EDITOR_HTML.replace("__PANVIZ_SCENE__", json.dumps(scene, ensure_ascii=False))
-    # Keep the iframe tall enough for the selected canvas and editor chrome.
+
+    # Let the embedded editor report its real rendered height to Streamlit.
+    # This prevents a large fixed iframe from leaving blank space below the
+    # editor and allows the scientific interaction table to follow immediately.
+    autosize_script = """
+    <script>
+    (() => {
+      let lastHeight = 0;
+      const reportHeight = () => {
+        const root = document.getElementById('pv-root');
+        if (!root) return;
+        const rect = root.getBoundingClientRect();
+        const height = Math.ceil(Math.max(
+          rect.bottom,
+          root.scrollHeight,
+          document.body.scrollHeight,
+          document.documentElement.scrollHeight
+        ) + 4);
+        if (Math.abs(height - lastHeight) < 2) return;
+        lastHeight = height;
+        window.parent.postMessage({
+          isStreamlitMessage: true,
+          type: 'streamlit:setFrameHeight',
+          height: height
+        }, '*');
+      };
+
+      window.addEventListener('load', () => {
+        reportHeight();
+        setTimeout(reportHeight, 100);
+        setTimeout(reportHeight, 400);
+      });
+
+      if ('ResizeObserver' in window) {
+        const observer = new ResizeObserver(reportHeight);
+        observer.observe(document.documentElement);
+        const root = document.getElementById('pv-root');
+        if (root) observer.observe(root);
+      }
+
+      window.addEventListener('resize', reportHeight);
+    })();
+    </script>
+    """
+    html = html + autosize_script
+
+    # A compact initial height is used only until the editor reports its
+    # measured height above.
     canvas_h = int(scene.get("height", 850) or 850)
-    iframe_h = max(1200, min(5000, canvas_h + 520))
-    components.html(html, height=iframe_h, scrolling=False)
+    initial_h = max(640, min(1800, canvas_h + 120))
+    components.html(html, height=initial_h, scrolling=False)
 
 def _eligible_binding_sites(pdb_path):
     mol = PDBComplex(); mol.load_pdb(str(pdb_path)); excluded={"ARN","ASH","GLH","LYN","HIE","HIP"}
