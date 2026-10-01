@@ -430,7 +430,7 @@ function interactionRecordRows(){
   const labelById=new Map((state.labels||[]).map(o=>[String(o.id),o]));
   const detected=(state.scientificData?.interactions||[]).map((o,i)=>{
     const lab=labelById.get(String(o.residueId))||{};
-    const residue=formatResidueLabel(lab.sourceResidue||lab.text||o.residueId||'—',state.style?.residue?.labelFormat||'nameNumChain');
+    const residue=formatResidueLabel(o.sourceResidue||lab.sourceResidue||lab.text||o.residueId||'—',state.style?.residue?.labelFormat||'nameNumChain');
     return{
       id:o.id||`detected_${i+1}`,
       residue,
