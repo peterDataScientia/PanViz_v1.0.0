@@ -46,3 +46,22 @@ These checks protect output behavior rather than the names of implementation fun
 > Improve PanViz around the renderer; do not casually redesign the renderer.
 
 A visual change should be treated as a scientific/publication design decision, not as a side effect of code cleanup.
+
+
+## PanViz 6 approved interaction-layer extension
+
+PanViz 6 deliberately extends the interaction vocabulary from five to all eight PLIP classes while preserving the pre-existing molecule and residue design.
+
+The following legacy visual rules remain unchanged for HPI, HB, SB, PS and PC:
+- ligand depiction and covalent bond styling;
+- residue placement and typography;
+- distance-label placement algorithm;
+- canvas fitting and whitespace;
+- existing interaction colors, widths and offsets.
+
+The following new interaction-only semantics are approved:
+- **WB — Water bridge:** cyan/teal, short-dashed;
+- **XB — Halogen bond:** violet, dashed;
+- **MC — Metal coordination:** brown, compact-dashed.
+
+This extension is additive. It does not authorize unrelated changes to ligand structure rendering, residue layout, or the established five interaction styles.
