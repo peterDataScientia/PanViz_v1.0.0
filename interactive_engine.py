@@ -283,7 +283,7 @@ def _exact_panviz_layout(data_points, connections, canvas_width, canvas_height, 
 
     interaction_lines = []
     interaction_distance_lines = []
-    shifts = {"HPI": 0, "HB": 6, "PS": 10, "PC": -10, "SB": -5}
+    shifts = {"HPI": 0, "HB": 6, "PS": 10, "PC": -10, "SB": -5, "WB": 4, "XB": -8, "MC": 8}
     for idx, connection in enumerate(connections):
         a, b, kind = connection[:3]
         distance = connection[3] if len(connection) >= 4 else None
@@ -549,7 +549,7 @@ def build_editor_scene(pdb_file, bsid, width=1200, height=850, base_svg=None, an
             "customLineWidth": False,
             "customColor": False,
             "customDash": False,
-            "dash": "9 5",
+            "dash": {"WB": "3 3", "XB": "6 4", "MC": "2 3"}.get(kind, "9 5"),
             "rotation": 0,
         })
         dl = layout["distance_lines"].get(line["index"])
@@ -643,7 +643,12 @@ def build_editor_scene(pdb_file, bsid, width=1200, height=850, base_svg=None, an
                 "backgroundOpacity": 0.96,
             },
             "interactions": {
-                k: {"color": INTERACTION_COLORS[k], "width": 3.0, "dash": "9 5", "custom": False}
+                k: {
+                    "color": INTERACTION_COLORS[k],
+                    "width": 3.0,
+                    "dash": {"WB": "3 3", "XB": "6 4", "MC": "2 3"}.get(k, "9 5"),
+                    "custom": False,
+                }
                 for k in INTERACTION_TYPES
             },
         },
