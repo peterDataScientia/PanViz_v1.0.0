@@ -1,4 +1,35 @@
-# PanViz Interactive v5.8.7 — Testing and validation
+# PanViz Interactive v6.0.0 — Testing and validation
+
+## v6.0.0 independent-engine gates
+
+PanViz 6 removes the active legacy `utils.py` and `interactive_engine.py`
+implementations and routes both the Streamlit app and CLI through
+`panviz_engine.py`.
+
+Automated CI now checks:
+
+- Python compilation for `app.py`, `PanViz.py`, `panviz_engine.py`, and `cloud_diagnostic.py`.
+- all eight PLIP interaction classes are present in the canonical model:
+  HPI, HB, WB, SB, PS, PC, XB, and MC.
+- the removed legacy function names are absent from the active engine.
+- `DetermineBonds(..., charge=0)` and `set_to_neutral_pH()` are absent from the depiction pipeline.
+- standalone SVG serialization contains molecule, interaction, residue, distance, and legend content.
+- CairoSVG produces a non-empty PNG from the same canonical scene.
+
+### Independent-implementation overlap check
+
+A direct normalized-line comparison of PanViz 6 `panviz_engine.py` against
+`cmwoodley/plip_to_2D/utils.py` found:
+
+- shared upstream function names: **0**
+- exact nonblank/non-comment lines: 104 / 1108 PanViz normalized lines; these are overwhelmingly imports, punctuation, `try`, `continue`, and other boilerplate.
+- after excluding imports/boilerplate and retaining substantive lines of at least 20 characters: **1 exact line out of 637 PanViz lines (~0.16%)**.
+- the one substantive exact line was the generic Python/RDKit loop `for atom in mol.GetAtoms():`.
+
+This comparison is a development check, not a legal test of copyright status.
+Historical lineage remains documented in `PROVENANCE.md`.
+
+## Historical v5 validation notes
 
 ## v5.8.7 molecular hard-lock checks
 - Molecular covalent bonds are rendered directly from immutable `state.bonds`.
@@ -23,8 +54,8 @@
 
 ## General validation notes
 
-Static checks completed:
-- Python syntax compilation for `app.py`, `interactive_engine.py`, `PanViz.py`, and `utils.py`.
+Historical static checks completed for the v5 codebase:
+- Python syntax compilation was performed for the then-active v5 modules.
 - Embedded editor JavaScript syntax check with Node.js.
 
 Interactive editor smoke test completed with Chromium + Playwright using a representative PanViz scene:
