@@ -110,3 +110,38 @@ def test_v6_app_integrity_guards_are_present():
     assert 'build_scientific_records(analysis_obj["my_interactions"])' in source
     assert "plip_2d_interactions(" in source
     assert "build_editor_scene(" in source
+
+
+def test_main_figure_records_are_derived_from_scene_exactly():
+    scene = {
+        "labels": [
+            {"id": "res_0", "text": "ASP34:A", "sourceResidue": "ASP34_A"},
+            {"id": "res_1", "text": "TYR192:A", "sourceResidue": "TYR192_A"},
+        ],
+        "scientificData": {
+            "interactions": [
+                {
+                    "id": "int_0",
+                    "type": "HB",
+                    "residueId": "res_0",
+                    "anchorAtom": "O1",
+                    "originalDistance": 2.80,
+                    "multiplicity": 1,
+                },
+                {
+                    "id": "int_1",
+                    "type": "PS",
+                    "residueId": "res_1",
+                    "anchorAtom": "ring1",
+                    "originalDistance": 4.72,
+                    "multiplicity": 1,
+                },
+            ]
+        },
+    }
+
+    figure = scientific_records.build_figure_records(scene)
+    assert len(figure) == 2
+    assert figure["Residue"].tolist() == ["ASP34:A", "TYR192:A"]
+    assert figure["Code"].tolist() == ["HB", "PS"]
+    assert figure["Distance (Å)"].tolist() == [2.80, 4.72]
