@@ -155,6 +155,24 @@ const editInput=document.getElementById('pv-edit-input');
 const status=document.getElementById('pv-status');
 const interactionTableBody=document.getElementById('pv-interaction-table-body');
 const interactionSummary=document.getElementById('pv-interaction-summary');
+function requestHostResize(){
+  const report=()=>{
+    const root=document.getElementById('pv-root');
+    if(!root)return;
+    const height=Math.ceil(Math.max(
+      root.scrollHeight,
+      root.getBoundingClientRect().height,
+      document.body?.scrollHeight||0,
+      document.documentElement?.scrollHeight||0
+    )+8);
+    window.parent.postMessage({
+      isStreamlitMessage:true,
+      type:'streamlit:setFrameHeight',
+      height
+    },'*');
+  };
+  requestAnimationFrame(()=>{report();setTimeout(report,40);});
+}
 const cw=document.getElementById('pv-canvas-w'), ch=document.getElementById('pv-canvas-h');
 const bondWidth=document.getElementById('pv-bond-width'), bondWidthValue=document.getElementById('pv-bond-width-value');
 const interactionWidth=document.getElementById('pv-interaction-width'), interactionWidthValue=document.getElementById('pv-interaction-width-value');
@@ -483,6 +501,7 @@ function renderInteractionTable(){
   const manualCount=rows.filter(r=>r.origin==='Manually added').length;
   const detectedCount=rows.length-manualCount;
   interactionSummary.textContent=`${detectedCount} detected${manualCount?` · ${manualCount} manually added`:''} · ${rows.length} total`;
+  requestHostResize();
 }
 function renderAnnotations(){layers.annotations.innerHTML='';bondLayer();interactionLayer();labelsLayer();distancesLayer();notesLayer();arrowsLayer();legendLayer();renderInteractionTable();}
 function selectionBounds(kind,o){if(kind==='interaction'||kind==='arrow'||kind==='bond'){const e=interactionEnds(o);return{x:Math.min(e.x1,e.x2),y:Math.min(e.y1,e.y2),w:Math.abs(e.x2-e.x1),h:Math.abs(e.y2-e.y1)};}if(kind==='legend')return{x:o.x-o.w/2-8,y:o.y-o.h/2-7,w:o.w+16,h:o.h+14};if(kind==='label'){const st=residueStyle(o);if(st.shape==='bubble'){const d=residueNodeRadius(o)*2;return{x:o.x-d/2-5,y:o.y-d/2-5,w:d+10,h:d+10};}if(st.shape==='circle'){const d=residueNodeRadius(o)*2;return{x:o.x-d/2,y:o.y-d/2,w:d,h:d};}}return{...rectGeometry(o,8,7)};}
