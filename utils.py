@@ -5,34 +5,67 @@ PanViz uses PLIP for interaction detection and provides the customized
 logic is retained from the supplied original PLIPViz utility.
 """
 
+print("UTILCHK 00 — utils.py entered", flush=True)
 from plip.basic import config
+print("UTILCHK 01 — plip.basic.config OK", flush=True)
 from plip.structure.preparation import PDBComplex
+print("UTILCHK 02 — PDBComplex OK", flush=True)
 from plip.exchange.report import BindingSiteReport
+print("UTILCHK 03 — BindingSiteReport OK", flush=True)
+
+print("UTILCHK 04 — before optional PLIP visualization imports", flush=True)
 try:
     from plip.visualization.visualize import PyMOLVisualizer
+    print("UTILCHK 05a — PyMOLVisualizer OK", flush=True)
     from plip.basic.remote import VisualizerData
+    print("UTILCHK 05b — VisualizerData OK", flush=True)
     from plip.basic.supplemental import start_pymol
-except Exception:
+    print("UTILCHK 05c — start_pymol OK", flush=True)
+except Exception as exc:
+    print(f"UTILCHK 05x — optional PLIP visualization unavailable: {type(exc).__name__}: {exc}", flush=True)
     PyMOLVisualizer = None
     VisualizerData = None
     start_pymol = None
+
+print("UTILCHK 06 — before pandas", flush=True)
 import pandas as pd
+print("UTILCHK 07 — pandas OK", flush=True)
 import numpy as np
+print("UTILCHK 08 — numpy OK", flush=True)
 import math
+print("UTILCHK 09 — math OK", flush=True)
+
+print("UTILCHK 10 — before openbabel.pybel", flush=True)
 from openbabel import pybel
+print("UTILCHK 11 — openbabel.pybel OK", flush=True)
+
+print("UTILCHK 12 — before RDKit Chem", flush=True)
 from rdkit import Chem
+print("UTILCHK 13 — RDKit Chem OK", flush=True)
 from rdkit.Chem import AllChem
+print("UTILCHK 14 — RDKit AllChem OK", flush=True)
+
+print("UTILCHK 15 — before cairo", flush=True)
 import cairo
+print("UTILCHK 16 — cairo OK", flush=True)
+
+print("UTILCHK 17 — before optional pymol.cmd", flush=True)
 try:
     from pymol import cmd
-except Exception:
+    print("UTILCHK 18a — pymol.cmd OK", flush=True)
+except Exception as exc:
+    print(f"UTILCHK 18x — optional pymol unavailable: {type(exc).__name__}: {exc}", flush=True)
     cmd = None
+
 import os
 import tempfile
+print("UTILCHK 19 — os/tempfile OK", flush=True)
 from rdkit.Chem import rdDetermineBonds
+print("UTILCHK 20 — rdDetermineBonds OK", flush=True)
 
 config.NOHYDRO = True
 ob = pybel.ob
+print("UTILCHK 21 — utils.py imports complete", flush=True)
 
 def _save_pymol(my_mol, my_id, outdir):
     '''Save a PyMOL session when PyMOL support is available.'''
