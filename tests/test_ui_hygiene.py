@@ -67,3 +67,13 @@ def test_live_interaction_table_has_vertical_scroll_fallback():
     editor = Path("editor.html").read_text(encoding="utf-8")
     assert "#pv-interaction-table-wrap{overflow:auto;max-height:min(420px,45vh)}" in editor
     assert "#pv-interaction-table th{position:sticky;top:0;" in editor
+
+
+def test_interaction_table_is_collapsed_by_default():
+    editor = Path("editor.html").read_text(encoding="utf-8")
+    assert '#pv-interaction-table-wrap{display:none;' in editor
+    assert '#pv-interaction-records.open #pv-interaction-table-wrap{display:block}' in editor
+    assert 'id="pv-interaction-toggle"' in editor
+    assert 'aria-expanded="false"' in editor
+    assert 'Show interaction records' in editor
+    assert "Hide interaction records" in editor
