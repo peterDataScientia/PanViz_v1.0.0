@@ -23,7 +23,7 @@ from utils import (
 from plip.structure.preparation import PDBComplex
 from plip.exchange.report import BindingSiteReport
 
-INTERACTION_TYPES = {"HPI", "HB", "PS", "PC", "SB"}
+INTERACTION_TYPES = {"HPI", "HB", "PS", "PC", "SB", "WB", "XB", "MC"}
 # Interaction colors retain the original PanViz semantic mapping.
 # RGB(10, 255, 239) is reserved for the optional 3D glass-bubble residue node.
 BUBBLE_COLOR = "#0AFFEF"  # RGB(10, 255, 239)
@@ -34,6 +34,9 @@ INTERACTION_COLORS = {
     "PS": "#008500",   # π-Stacking
     "PC": "#E08000",   # π-Cation
     "SB": "#D900B0",   # Salt bridge
+    "WB": "#1596B8",   # Water bridge
+    "XB": "#7A5CC7",   # Halogen bond
+    "MC": "#A45700",   # Metal coordination
 }
 INTERACTION_LABELS = {
     "HPI": "Hydrophobic",
@@ -41,6 +44,9 @@ INTERACTION_LABELS = {
     "PS": "π-Stacking",
     "PC": "π-Cation",
     "SB": "Salt bridge",
+    "WB": "Water bridge",
+    "XB": "Halogen bond",
+    "MC": "Metal coordination",
 }
 
 
@@ -89,7 +95,28 @@ def _prepare_interaction_tables(my_interactions):
         interactions["saltbridge"][1:],
         columns=interactions["saltbridge"][0],
     )
-    return hydrophobic_df, hbond_df, pi_stacking_df, pi_cation_df, saltbridge_df
+    waterbridge_df = pd.DataFrame(
+        interactions["waterbridge"][1:],
+        columns=interactions["waterbridge"][0],
+    )
+    halogen_df = pd.DataFrame(
+        interactions["halogen"][1:],
+        columns=interactions["halogen"][0],
+    )
+    metal_df = pd.DataFrame(
+        interactions["metal"][1:],
+        columns=interactions["metal"][0],
+    )
+    return (
+        hydrophobic_df,
+        hbond_df,
+        pi_stacking_df,
+        pi_cation_df,
+        saltbridge_df,
+        waterbridge_df,
+        halogen_df,
+        metal_df,
+    )
 
 
 def _extract_ligand_mol(file_prot, bsid):
@@ -379,6 +406,9 @@ def build_editor_scene(pdb_file, bsid, width=1200, height=850, base_svg=None, an
         ps = analysis["pi_stacking_df"]
         pc = analysis["pi_cation_df"]
         sb = analysis["saltbridge_df"]
+        wb = analysis.get("waterbridge_df", pd.DataFrame())
+        xb = analysis.get("halogen_df", pd.DataFrame())
+        mc = analysis.get("metal_df", pd.DataFrame())
     else:
         structures = os.path.join(root, "structures")
         os.makedirs(structures, exist_ok=True)
@@ -390,7 +420,7 @@ def build_editor_scene(pdb_file, bsid, width=1200, height=850, base_svg=None, an
         if bsid not in my_mol.interaction_sets:
             raise RuntimeError(f"Binding site {bsid} was not found after PLIP analysis.")
         my_interactions = my_mol.interaction_sets[bsid]
-        hpi, hb, ps, pc, sb = _prepare_interaction_tables(my_interactions)
+        hpi, hb, ps, pc, sb, wb, xb, mc = _prepare_interaction_tables(my_interactions)
     mol = _extract_ligand_mol(file_prot, bsid)
 
     raw_atoms, bonds = [], []
@@ -411,7 +441,16 @@ def build_editor_scene(pdb_file, bsid, width=1200, height=850, base_svg=None, an
 
     coord_dict = {name: (x, y) for x, y, _, name in raw_atoms}
     interaction_rows, centroids, used_res = _get_interactions(
-        input_pdb, hpi, hb, ps, pc, sb, coord_dict
+        input_pdb,
+        hpi,
+        hb,
+        ps,
+        pc,
+        sb,
+        wb,
+        xb,
+        mc,
+        coord_dict,
     )
     res_info = _get_res_info(used_res, coord_dict, interaction_rows)
     data_points = [(x, y, symbol, name) for x, y, symbol, name in raw_atoms]
