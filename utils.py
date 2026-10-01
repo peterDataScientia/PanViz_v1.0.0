@@ -1219,14 +1219,14 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
     # binding site.  Keep the order consistent with the interaction
     # vocabulary used by the renderer.
     legend_definitions = [
-        ("HPI", "Hydrophobic", (0.5, 0.5, 0.5), [10, 5]),
-        ("HB",  "H-bond",      (0.0, 0.0, 1.0), [10, 5]),
-        ("PS",  "π-Stacking",  (0.0, 0.6, 0.0), [10, 5]),
-        ("PC",  "π-Cation",    (1.0, 0.7, 0.0), [10, 5]),
-        ("SB",  "Salt bridge", (1.0, 0.0, 1.0), [10, 5]),
-        ("WB",  "Water bridge", (0.08, 0.58, 0.72), [3, 3]),
-        ("XB",  "Halogen bond", (0.48, 0.36, 0.78), [6, 4]),
-        ("MC",  "Metal coordination", (0.64, 0.34, 0.00), [2, 3]),
+        ("HPI", "Hydrophobic contact", (0.5, 0.5, 0.5), [10, 5]),
+        ("HB",  "Hydrogen bond",       (0.0, 0.0, 1.0), [10, 5]),
+        ("WB",  "Water bridge",        (0.08, 0.58, 0.72), [3, 3]),
+        ("SB",  "Salt bridge",         (1.0, 0.0, 1.0), [10, 5]),
+        ("PS",  "π-Stacking",          (0.0, 0.6, 0.0), [10, 5]),
+        ("PC",  "π-Cation",            (1.0, 0.7, 0.0), [10, 5]),
+        ("XB",  "Halogen bond",        (0.48, 0.36, 0.78), [6, 4]),
+        ("MC",  "Metal coordination",  (0.64, 0.34, 0.00), [2, 3]),
     ]
 
     present_interactions = {
@@ -1263,18 +1263,39 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
         horizontal_padding = 12
         vertical_padding = 8
 
-        total_width = horizontal_padding * 2
-
         for label, color, dash in legend_items:
             ext = ctx.text_extents(label)
             text_width = ext[2]
             item_width = line_sample_width + line_to_text_gap + text_width
             item_metrics.append((label, color, dash, item_width, text_width))
-            total_width += item_width
 
-        total_width += item_gap * (len(legend_items) - 1)
+        # Wrap the legend so it remains inside the publication canvas.
+        max_legend_width = max(260.0, min(float(canvas_width) - 80.0, 900.0))
+        max_content_width = max(100.0, max_legend_width - horizontal_padding * 2)
+        rows = []
+        current_row = []
+        current_width = 0.0
+        for metric in item_metrics:
+            item_width = metric[3]
+            added_width = item_width if not current_row else item_gap + item_width
+            if current_row and current_width + added_width > max_content_width:
+                rows.append((current_row, current_width))
+                current_row = []
+                current_width = 0.0
+            current_row.append(metric)
+            current_width += item_width if current_width == 0 else item_gap + item_width
+        if current_row:
+            rows.append((current_row, current_width))
 
-        legend_height = legend_font_size + vertical_padding * 2 + 2
+        content_width = max((row_width for _, row_width in rows), default=76.0)
+        total_width = min(max_legend_width, content_width + horizontal_padding * 2)
+        row_line_height = legend_font_size + 6
+        row_gap = 7
+        legend_height = (
+            len(rows) * row_line_height
+            + max(0, len(rows) - 1) * row_gap
+            + vertical_padding * 2
+        )
         legend_x = (canvas_width - total_width) / 2
         legend_y = canvas_height - padding / 3
 
@@ -1290,31 +1311,32 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
         ctx.set_source_rgb(0, 0, 0)
         ctx.stroke()
 
-        # Draw compact, uniform legend entries.
-        cursor_x = legend_x + horizontal_padding
+        # Draw centered rows with uniform publication spacing.
         baseline_y = box_y + vertical_padding + legend_font_size - 1
+        for row, row_width in rows:
+            cursor_x = legend_x + (total_width - row_width) / 2
+            for label, color, dash, item_width, text_width in row:
+                # Interaction sample.
+                ctx.set_source_rgba(color[0], color[1], color[2], 0.8)
+                ctx.set_line_width(legend_line_width)
+                ctx.set_dash(dash, 0)
 
-        for label, color, dash, item_width, text_width in item_metrics:
-            # Interaction sample.
-            ctx.set_source_rgba(color[0], color[1], color[2], 0.8)
-            ctx.set_line_width(legend_line_width)
-            ctx.set_dash(dash, 0)
+                line_y = baseline_y - legend_font_size * 0.38
+                ctx.move_to(cursor_x, line_y)
+                ctx.line_to(cursor_x + line_sample_width, line_y)
+                ctx.stroke()
 
-            line_y = baseline_y - legend_font_size * 0.38
-            ctx.move_to(cursor_x, line_y)
-            ctx.line_to(cursor_x + line_sample_width, line_y)
-            ctx.stroke()
+                # Label.
+                ctx.set_dash([], 0)
+                ctx.set_source_rgb(0, 0, 0)
+                ctx.move_to(
+                    cursor_x + line_sample_width + line_to_text_gap,
+                    baseline_y
+                )
+                ctx.show_text(label)
 
-            # Label.
-            ctx.set_dash([], 0)
-            ctx.set_source_rgb(0, 0, 0)
-            ctx.move_to(
-                cursor_x + line_sample_width + line_to_text_gap,
-                baseline_y
-            )
-            ctx.show_text(label)
-
-            cursor_x += item_width + item_gap
+                cursor_x += item_width + item_gap
+            baseline_y += row_line_height + row_gap
 
 
     # Save the image to a file
