@@ -29,10 +29,10 @@ jobs:
           pip install -r requirements.txt
           pip install pytest
 
-      - name: Compile protected renderer modules
+      - name: Compile PanViz v6 modules
         run: |
-          python -m py_compile utils.py interactive_engine.py app.py PanViz.py
+          python -m py_compile utils.py interactive_engine.py app.py PanViz.py scientific_records.py panviz_version.py
 
-      - name: Verify publication renderer contract
+      - name: Verify publication renderer and v6 architecture
         run: |
-          pytest -q tests/test_publication_renderer_contract.py
+          pytest -q
