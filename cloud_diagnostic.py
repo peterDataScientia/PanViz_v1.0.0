@@ -187,3 +187,66 @@ st.info(
     "If the normal PanViz app still segfaults while this diagnostic passes, "
     "the failure is after startup and should be isolated by testing specific runtime actions."
 )
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: reproduce app.py's pre-upload Streamlit execution path.
+# ---------------------------------------------------------------------------
+import tempfile
+
+log("CHECKPOINT 16 — PHASE 2 pre-upload Streamlit path — START")
+
+log("CHECKPOINT 17 — create temporary PanViz workspace — START")
+_phase2_work_root = Path(tempfile.mkdtemp(prefix="panviz_diag_"))
+log(f"CHECKPOINT 17 — create temporary PanViz workspace — OK: {_phase2_work_root}")
+
+log("CHECKPOINT 18 — render PanViz-style HTML/CSS — START")
+st.markdown(
+    """
+    <style>
+    .pv-diag-shell{
+        border:1px solid #dbe3ee;
+        border-radius:14px;
+        padding:12px 14px;
+        background:#ffffff;
+        margin:10px 0;
+    }
+    </style>
+    <div class="pv-diag-shell">
+      <strong>PanViz pre-upload UI smoke test</strong><br>
+      This block intentionally exercises the same unsafe-HTML rendering path used by app.py.
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+log("CHECKPOINT 18 — render PanViz-style HTML/CSS — OK")
+
+log("CHECKPOINT 19 — Streamlit radio widget — START")
+_diag_mode = st.radio(
+    "Diagnostic input mode",
+    ["PDB complex", "Docking PDBQT"],
+    horizontal=True,
+    key="panviz_diag_input_mode",
+)
+log(f"CHECKPOINT 19 — Streamlit radio widget — OK: {_diag_mode}")
+
+log("CHECKPOINT 20 — Streamlit file uploader — START")
+_diag_upload = st.file_uploader(
+    "Diagnostic PDB uploader — no file is processed",
+    type=["pdb"],
+    key="panviz_diag_pdb_upload",
+)
+log("CHECKPOINT 20 — Streamlit file uploader — OK")
+
+log("CHECKPOINT 21 — Streamlit info/markdown path — START")
+if _diag_upload is None:
+    st.info("No diagnostic file uploaded. This intentionally matches PanViz's initial no-upload state.")
+    st.markdown("</div>", unsafe_allow_html=True)
+log("CHECKPOINT 21 — Streamlit info/markdown path — OK")
+
+log("CHECKPOINT 22 — st.stop() path — ABOUT TO EXECUTE")
+st.caption(
+    "Checkpoint 22 is the expected final line for this diagnostic. "
+    "If the app remains online after this, Streamlit's normal st.stop() path is healthy."
+)
+st.stop()
