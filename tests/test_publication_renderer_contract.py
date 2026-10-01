@@ -139,3 +139,38 @@ def test_all_eight_plip_interaction_classes_are_supported():
     assert interactive_engine.INTERACTION_LABELS["WB"] == "Water bridge"
     assert interactive_engine.INTERACTION_LABELS["XB"] == "Halogen bond"
     assert interactive_engine.INTERACTION_LABELS["MC"] == "Metal coordination"
+
+
+def test_publication_legend_has_fixed_scientific_order_and_formal_labels():
+    assert interactive_engine.INTERACTION_ORDER == (
+        "HPI", "HB", "WB", "SB", "PS", "PC", "XB", "MC"
+    )
+    assert interactive_engine.INTERACTION_LABELS["HPI"] == "Hydrophobic contact"
+    assert interactive_engine.INTERACTION_LABELS["HB"] == "Hydrogen bond"
+
+
+def test_editor_legend_wraps_within_canvas():
+    editor = Path("editor.html").read_text(encoding="utf-8")
+    assert "const LEGEND_ORDER=['HPI','HB','WB','SB','PS','PC','XB','MC'];" in editor
+    assert "function legendLayout(l)" in editor
+    assert "Math.min(Number(state.width||1200)-80,900)" in editor
+    assert "for(const row of layout.rows)" in editor
+    assert "let cursor=ox-row.width/2;" in editor
+
+
+def test_static_legend_uses_same_order_and_wrap_limit():
+    source = Path("utils.py").read_text(encoding="utf-8")
+    expected = [
+        '("HPI", "Hydrophobic contact"',
+        '("HB",  "Hydrogen bond"',
+        '("WB",  "Water bridge"',
+        '("SB",  "Salt bridge"',
+        '("PS",  "π-Stacking"',
+        '("PC",  "π-Cation"',
+        '("XB",  "Halogen bond"',
+        '("MC",  "Metal coordination"',
+    ]
+    positions = [source.index(token) for token in expected]
+    assert positions == sorted(positions)
+    assert "max_legend_width = max(260.0, min(float(canvas_width) - 80.0, 900.0))" in source
+    assert "for row, row_width in rows:" in source
