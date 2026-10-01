@@ -18,8 +18,8 @@ INTERACTION_CLASSES = {
     "MC": ("metal", "Metal coordination"),
 }
 
-# The protected publication renderer currently visualizes these five classes.
-RENDERED_INTERACTION_CLASSES = {"HPI", "HB", "SB", "PS", "PC"}
+# PanViz v6 publication renderer supports all eight PLIP interaction classes.
+RENDERED_INTERACTION_CLASSES = {"HPI", "HB", "WB", "SB", "PS", "PC", "XB", "MC"}
 
 
 def _is_missing(value) -> bool:
@@ -169,9 +169,12 @@ def write_scientific_exports(
 FIGURE_INTERACTION_LABELS = {
     "HPI": "Hydrophobic",
     "HB": "Hydrogen bond",
+    "WB": "Water bridge",
     "SB": "Salt bridge",
     "PS": "Pi-stacking",
     "PC": "Pi-cation",
+    "XB": "Halogen bond",
+    "MC": "Metal coordination",
 }
 
 
