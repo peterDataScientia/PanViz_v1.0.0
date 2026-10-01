@@ -49,8 +49,8 @@ def test_scientific_layer_normalizes_all_eight_plip_classes(monkeypatch):
     assert set(tables) == {"HPI", "HB", "WB", "SB", "PS", "PC", "XB", "MC"}
     assert len(records) == 8
 
-    rendered = set(records.loc[records["Rendered in figure"], "Code"])
-    preserved_only = set(records.loc[~records["Rendered in figure"], "Code"])
+    rendered = set(records.loc[records["Renderer-supported class"], "Code"])
+    preserved_only = set(records.loc[~records["Renderer-supported class"], "Code"])
     assert rendered == {"HPI", "HB", "SB", "PS", "PC"}
     assert preserved_only == {"WB", "XB", "MC"}
 
