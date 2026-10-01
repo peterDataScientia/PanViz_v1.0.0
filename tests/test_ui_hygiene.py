@@ -50,3 +50,14 @@ def test_live_table_is_refreshed_with_editor_render_cycle():
     editor = Path("editor.html").read_text(encoding="utf-8")
     assert "function renderInteractionTable()" in editor
     assert "legendLayer();renderInteractionTable();" in editor
+
+
+def test_editor_remains_scrollable_below_figure():
+    app = Path("app.py").read_text(encoding="utf-8")
+    editor = Path("editor.html").read_text(encoding="utf-8")
+
+    assert "scrolling=True" in app
+    assert "MutationObserver" in app
+    assert "function requestHostResize()" in editor
+    assert "requestHostResize();" in editor
+    assert "streamlit:setFrameHeight" in editor
