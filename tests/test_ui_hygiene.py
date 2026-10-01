@@ -77,3 +77,16 @@ def test_interaction_table_is_collapsed_by_default():
     assert 'aria-expanded="false"' in editor
     assert 'Show interaction records' in editor
     assert "Hide interaction records" in editor
+
+
+def test_pdf_and_png_share_the_same_export_geometry():
+    editor = Path("editor.html").read_text(encoding="utf-8")
+
+    assert "function exportScale()" in editor
+    assert "function scaledExportGeometry()" in editor
+    assert "const xg=scaledExportGeometry()" in editor
+    assert "const pdfW=xg.width*pxToPt;" in editor
+    assert "const pdfH=xg.height*pxToPt;" in editor
+    assert "c.width=xg.width;c.height=xg.height;" in editor
+    assert "matching the ${xg.scale}× PNG export size" in editor
+    assert '<span class="label">Export scale</span>' in editor
