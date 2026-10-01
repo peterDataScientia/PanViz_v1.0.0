@@ -421,7 +421,6 @@ with left:selected_site=st.selectbox("Ligand / binding site",binding_sites)
 with right:out_width=st.number_input("Figure width",min_value=700,max_value=3000,value=1200,step=100)
 out_height=st.number_input("Figure height",min_value=500,max_value=3000,value=850,step=50)
 analyze=st.button("Generate PanViz interaction diagram",type="primary",use_container_width=True)
-st.caption("One PLIP analysis is reused for the original figures and the interactive editor; alternate exports do not trigger a second scientific analysis.")
 st.markdown("</div>", unsafe_allow_html=True)
 
 result_key_payload = {
@@ -510,7 +509,6 @@ png_path=Path(result["png_path"]); svg_path=Path(result["svg_path"]); site_dir=P
 
 st.markdown('<div class="panviz-section"><h4>3 · Interactive figure editor</h4>', unsafe_allow_html=True)
 render_editor(result["scene"])
-st.caption(f"v{PANVIZ_VERSION}: the approved publication renderer is preserved; imported molecular structure and PLIP scientific records remain immutable while only the presentation layer is editable.")
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="panviz-section"><h4>4 · Figure interaction records</h4>', unsafe_allow_html=True)
@@ -534,10 +532,6 @@ with st.expander(
     + ")",
     expanded=False,
 ):
-    st.caption(
-        "This complete scientific table may include PLIP classes not currently drawn by the protected publication renderer. "
-        "The main table above is the authoritative record of interactions represented in the figure."
-    )
     if not scientific_df.empty:
         st.dataframe(
             scientific_df[["Record ID","Residue","Interaction","Code","Distance (Å)","Rendered in figure"]],
@@ -616,5 +610,5 @@ with st.expander("Downloads & project files", expanded=False):
             use_container_width=True,
         )
 
-st.markdown(f'</div><div class="panviz-foot">PanViz v{PANVIZ_VERSION} · protected publication renderer + one reusable PLIP analysis + immutable scientific records + editable presentation layer.</div>', unsafe_allow_html=True)
+st.markdown(f'</div><div class="panviz-foot">PanViz v{PANVIZ_VERSION}</div>', unsafe_allow_html=True)
 
