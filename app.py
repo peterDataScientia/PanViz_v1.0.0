@@ -527,14 +527,14 @@ else:
 
 extra_count=max(0, len(scientific_df)-len(interaction_df))
 with st.expander(
-    f"Complete PLIP scientific records ({len(scientific_df)} total"
+    f"All PLIP detections ({len(scientific_df)} total"
     + (f"; {extra_count} additional to figure" if extra_count else "")
     + ")",
     expanded=False,
 ):
     if not scientific_df.empty:
         st.dataframe(
-            scientific_df[["Record ID","Residue","Interaction","Code","Distance (Å)","Rendered in figure"]],
+            scientific_df[["Record ID","Residue","Interaction","Code","Distance (Å)","Renderer-supported class"]],
             use_container_width=True,
             hide_index=True,
             height=min(520, max(240, 34 * (len(scientific_df) + 1))),
