@@ -26,3 +26,27 @@ def test_editor_does_not_expose_serialized_annotations_to_system_clipboard():
 def test_editor_status_starts_with_simple_user_facing_copy():
     source = Path("editor.html").read_text(encoding="utf-8")
     assert '<span id="pv-status">Ready</span>' in source
+
+
+def test_editor_is_the_single_interaction_table_surface():
+    app = Path("app.py").read_text(encoding="utf-8")
+    editor = Path("editor.html").read_text(encoding="utf-8")
+
+    assert "Figure interaction records" not in app
+    assert "All PLIP detections" not in app
+    assert "st.dataframe(" not in app
+    assert "Publication PNG" not in app
+    assert "Publication SVG" not in app
+
+    assert 'id="pv-interaction-records"' in editor
+    assert 'id="pv-interaction-table-body"' in editor
+    assert "state.scientificData?.interactions" in editor
+    assert "state.customInteractions" in editor
+    assert "Manually added" in editor
+    assert "Detected" in editor
+
+
+def test_live_table_is_refreshed_with_editor_render_cycle():
+    editor = Path("editor.html").read_text(encoding="utf-8")
+    assert "function renderInteractionTable()" in editor
+    assert "legendLayer();renderInteractionTable();" in editor
