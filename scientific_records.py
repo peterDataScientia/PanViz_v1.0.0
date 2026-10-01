@@ -22,9 +22,17 @@ INTERACTION_CLASSES = {
 RENDERED_INTERACTION_CLASSES = {"HPI", "HB", "SB", "PS", "PC"}
 
 
+def _is_missing(value) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, float):
+        return pd.isna(value)
+    return False
+
+
 def _first_present(row: pd.Series, names):
     for name in names:
-        if name in row.index and pd.notna(row[name]):
+        if name in row.index and not _is_missing(row[name]):
             return row[name]
     return None
 
@@ -75,7 +83,7 @@ def build_scientific_records(my_interactions) -> tuple[pd.DataFrame, dict[str, p
 
         for idx, row in table.iterrows():
             raw = {
-                str(key): (None if pd.isna(value) else value)
+                str(key): (None if _is_missing(value) else value)
                 for key, value in row.items()
             }
             # Ensure JSON-safe scalar representations in the exported record.
