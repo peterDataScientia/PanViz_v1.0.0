@@ -186,3 +186,14 @@ def test_legend_samples_match_rendered_interaction_styles():
     assert '("HPI", "Hydrophobic contact", (0.35, 0.35, 0.35), [9, 5])' in static
     assert '("HB",  "Hydrogen bond",       (0.0, 0.0, 0.88), [9, 5])' in static
     assert '("SB",  "Salt bridge",         (0.85, 0.0, 0.70), [9, 5])' in static
+
+
+def test_default_residue_bubble_size_is_60_px():
+    scene_source = Path("interactive_engine.py").read_text(encoding="utf-8")
+    editor = Path("editor.html").read_text(encoding="utf-8")
+
+    assert '"nodeSize": 60' in scene_source
+    assert "nodeSize:60" in editor
+    assert ">60 px</output>" in editor
+    assert "nodeSize??60" in editor
+    assert "nodeSize||60" in editor
