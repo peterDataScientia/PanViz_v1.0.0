@@ -51,8 +51,8 @@ def test_scientific_layer_normalizes_all_eight_plip_classes(monkeypatch):
 
     rendered = set(records.loc[records["Renderer-supported class"], "Code"])
     preserved_only = set(records.loc[~records["Renderer-supported class"], "Code"])
-    assert rendered == {"HPI", "HB", "SB", "PS", "PC"}
-    assert preserved_only == {"WB", "XB", "MC"}
+    assert rendered == {"HPI", "HB", "WB", "SB", "PS", "PC", "XB", "MC"}
+    assert preserved_only == set()
 
     ps = records.loc[records["Code"] == "PS"].iloc[0]
     assert ps["Residue"] == "TYR192:A"
@@ -145,3 +145,22 @@ def test_main_figure_records_are_derived_from_scene_exactly():
     assert figure["Residue"].tolist() == ["ASP34:A", "TYR192:A"]
     assert figure["Code"].tolist() == ["HB", "PS"]
     assert figure["Distance (Å)"].tolist() == [2.80, 4.72]
+
+
+def test_figure_record_labels_cover_new_interaction_classes():
+    scene = {
+        "labels": [{"id": "r", "text": "SER79:A"}],
+        "scientificData": {
+            "interactions": [
+                {"id": "w", "type": "WB", "residueId": "r", "anchorAtom": "O2", "originalDistance": 2.7},
+                {"id": "x", "type": "XB", "residueId": "r", "anchorAtom": "CL1", "originalDistance": 3.3},
+                {"id": "m", "type": "MC", "residueId": "r", "anchorAtom": "ZN1", "originalDistance": 2.15},
+            ]
+        },
+    }
+    figure = scientific_records.build_figure_records(scene)
+    assert figure["Interaction"].tolist() == [
+        "Water bridge",
+        "Halogen bond",
+        "Metal coordination",
+    ]
