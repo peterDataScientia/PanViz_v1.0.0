@@ -174,3 +174,15 @@ def test_static_legend_uses_same_order_and_wrap_limit():
     assert positions == sorted(positions)
     assert "max_legend_width = max(260.0, min(float(canvas_width) - 80.0, 900.0))" in source
     assert "for row, row_width in rows:" in source
+
+
+def test_legend_samples_match_rendered_interaction_styles():
+    editor = Path("editor.html").read_text(encoding="utf-8")
+    static = Path("utils.py").read_text(encoding="utf-8")
+
+    assert "HPI:{label:'Hydrophobic contact',color:'#595959',lineWidth:3,dash:'9 5'}" in editor
+    assert "HB:{label:'Hydrogen bond',color:'#0000E0',lineWidth:3,dash:'9 5'}" in editor
+    assert "SB:{label:'Salt bridge',color:'#D900B0',lineWidth:3,dash:'9 5'}" in editor
+    assert '("HPI", "Hydrophobic contact", (0.35, 0.35, 0.35), [9, 5])' in static
+    assert '("HB",  "Hydrogen bond",       (0.0, 0.0, 0.88), [9, 5])' in static
+    assert '("SB",  "Salt bridge",         (0.85, 0.0, 0.70), [9, 5])' in static
