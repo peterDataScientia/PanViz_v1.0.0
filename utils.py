@@ -1219,12 +1219,12 @@ def plip_2d_interactions(file, bsid, padding=35, canvas_height=700, canvas_width
     # binding site.  Keep the order consistent with the interaction
     # vocabulary used by the renderer.
     legend_definitions = [
-        ("HPI", "Hydrophobic contact", (0.5, 0.5, 0.5), [10, 5]),
-        ("HB",  "Hydrogen bond",       (0.0, 0.0, 1.0), [10, 5]),
+        ("HPI", "Hydrophobic contact", (0.35, 0.35, 0.35), [9, 5]),
+        ("HB",  "Hydrogen bond",       (0.0, 0.0, 0.88), [9, 5]),
         ("WB",  "Water bridge",        (0.08, 0.58, 0.72), [3, 3]),
-        ("SB",  "Salt bridge",         (1.0, 0.0, 1.0), [10, 5]),
-        ("PS",  "π-Stacking",          (0.0, 0.6, 0.0), [10, 5]),
-        ("PC",  "π-Cation",            (1.0, 0.7, 0.0), [10, 5]),
+        ("SB",  "Salt bridge",         (0.85, 0.0, 0.70), [9, 5]),
+        ("PS",  "π-Stacking",          (0.0, 0.52, 0.0), [9, 5]),
+        ("PC",  "π-Cation",            (0.88, 0.52, 0.0), [9, 5]),
         ("XB",  "Halogen bond",        (0.48, 0.36, 0.78), [6, 4]),
         ("MC",  "Metal coordination",  (0.64, 0.34, 0.00), [2, 3]),
     ]
