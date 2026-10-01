@@ -15,6 +15,19 @@
 #pv-toolbar input[type=range]{width:82px;padding:0}
 #pv-status{margin-left:auto;color:#526174;font-size:11px;white-space:nowrap;font-weight:600;padding:5px 8px;border:1px solid #e1e7ef;border-radius:999px;background:#f8fafc}
 #pv-wrap{border:1px solid #d9e0ea;border-radius:0 0 14px 14px;background:#eef2f7;overflow:hidden;box-shadow:0 6px 18px rgba(31,55,88,.07)}
+#pv-interaction-records{margin-top:14px;border:1px solid #d9e0ea;border-radius:12px;background:#fff;overflow:hidden;box-shadow:0 4px 14px rgba(31,55,88,.06)}
+#pv-interaction-records .head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 14px;border-bottom:1px solid #e5eaf1;background:#f8fafc}
+#pv-interaction-records .title{font-size:13px;font-weight:750;color:#1f2937}
+#pv-interaction-records .summary{font-size:11px;color:#64748b;font-weight:600}
+#pv-interaction-table-wrap{overflow-x:auto}
+#pv-interaction-table{width:100%;border-collapse:collapse;font-size:12px}
+#pv-interaction-table th{padding:9px 11px;text-align:left;background:#f8fafc;color:#475569;font-weight:700;border-bottom:1px solid #e5e7eb;white-space:nowrap}
+#pv-interaction-table td{padding:9px 11px;border-bottom:1px solid #eef1f5;color:#1f2937;vertical-align:middle}
+#pv-interaction-table tbody tr:last-child td{border-bottom:0}
+.pv-origin-badge{display:inline-block;border-radius:999px;padding:3px 7px;font-size:10px;font-weight:750;white-space:nowrap}
+.pv-origin-detected{background:#e8f5ee;color:#17603a;border:1px solid #c8e8d6}
+.pv-origin-manual{background:#fff3df;color:#8a4b08;border:1px solid #f4d6a4}
+.pv-int-swatch{display:inline-block;width:18px;height:3px;border-radius:3px;margin-right:7px;vertical-align:middle}
 #pv-stage{position:relative;display:block;width:100%;min-width:0;box-sizing:border-box;background:#eef2f7;padding:18px;overflow:hidden}
 #pv-svg-canvas{display:block;width:100%;height:auto;max-width:100%;background:#fff;touch-action:none;user-select:none;border-radius:10px;box-shadow:0 8px 24px rgba(33,49,75,.10)}
 .pv-hit{cursor:move}.pv-note-hit{cursor:move}.pv-arrow-hit{cursor:move}
@@ -115,6 +128,18 @@
     <div id="pv-edit-pop"><input id="pv-edit-input" type="text"><button id="pv-edit-apply">Apply</button></div>
   </div>
 </div>
+<div id="pv-interaction-records">
+  <div class="head">
+    <div class="title">Interaction records</div>
+    <div id="pv-interaction-summary" class="summary"></div>
+  </div>
+  <div id="pv-interaction-table-wrap">
+    <table id="pv-interaction-table">
+      <thead><tr><th>#</th><th>Residue</th><th>Interaction</th><th>Ligand atom</th><th>Distance (Å)</th><th>Origin</th></tr></thead>
+      <tbody id="pv-interaction-table-body"></tbody>
+    </table>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -128,6 +153,8 @@ const ribbon=document.getElementById('pv-ribbon');
 const editPop=document.getElementById('pv-edit-pop');
 const editInput=document.getElementById('pv-edit-input');
 const status=document.getElementById('pv-status');
+const interactionTableBody=document.getElementById('pv-interaction-table-body');
+const interactionSummary=document.getElementById('pv-interaction-summary');
 const cw=document.getElementById('pv-canvas-w'), ch=document.getElementById('pv-canvas-h');
 const bondWidth=document.getElementById('pv-bond-width'), bondWidthValue=document.getElementById('pv-bond-width-value');
 const interactionWidth=document.getElementById('pv-interaction-width'), interactionWidthValue=document.getElementById('pv-interaction-width-value');
@@ -399,7 +426,65 @@ function legendLayer(){
   hit.addEventListener('pointerdown',ev=>begin(ev,'legend','legend'));
   rotgrp.appendChild(hit);outer.appendChild(rotgrp);g.appendChild(outer);layers.annotations.appendChild(g);
 }
-function renderAnnotations(){layers.annotations.innerHTML='';bondLayer();interactionLayer();labelsLayer();distancesLayer();notesLayer();arrowsLayer();legendLayer();}
+function interactionRecordRows(){
+  const labelById=new Map((state.labels||[]).map(o=>[String(o.id),o]));
+  const detected=(state.scientificData?.interactions||[]).map((o,i)=>{
+    const lab=labelById.get(String(o.residueId))||{};
+    const residue=formatResidueLabel(lab.sourceResidue||lab.text||o.residueId||'—',state.style?.residue?.labelFormat||'nameNumChain');
+    return{
+      id:o.id||`detected_${i+1}`,
+      residue,
+      type:o.type||'',
+      atom:o.anchorAtom||'—',
+      distance:Number.isFinite(Number(o.originalDistance))?Number(o.originalDistance):null,
+      origin:'Detected'
+    };
+  });
+  const manual=(state.customInteractions||[]).map((o,i)=>({
+    id:o.id||`manual_${i+1}`,
+    residue:o.residueId?formatResidueLabel(o.residueId,state.style?.residue?.labelFormat||'nameNumChain'):'—',
+    type:o.type||'HB',
+    atom:o.anchorAtom||'—',
+    distance:Number.isFinite(Number(o.originalDistance))?Number(o.originalDistance):null,
+    origin:'Manually added'
+  }));
+  return [...detected,...manual];
+}
+function renderInteractionTable(){
+  if(!interactionTableBody||!interactionSummary)return;
+  const rows=interactionRecordRows();
+  interactionTableBody.innerHTML='';
+  rows.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    const meta=legendTypeDefaults(r.type);
+    const values=[
+      String(i+1),
+      r.residue||'—',
+      '',
+      r.atom||'—',
+      r.distance==null?'—':Number(r.distance).toFixed(2),
+      ''
+    ];
+    values.forEach((value,idx)=>{
+      const td=document.createElement('td');
+      if(idx===2){
+        const sw=document.createElement('span');sw.className='pv-int-swatch';sw.style.background=meta.color||'#595959';td.appendChild(sw);
+        td.appendChild(document.createTextNode(meta.label||r.type||'Interaction'));
+      }else if(idx===5){
+        const badge=document.createElement('span');
+        badge.className='pv-origin-badge '+(r.origin==='Detected'?'pv-origin-detected':'pv-origin-manual');
+        badge.textContent=r.origin;
+        td.appendChild(badge);
+      }else td.textContent=value;
+      tr.appendChild(td);
+    });
+    interactionTableBody.appendChild(tr);
+  });
+  const manualCount=rows.filter(r=>r.origin==='Manually added').length;
+  const detectedCount=rows.length-manualCount;
+  interactionSummary.textContent=`${detectedCount} detected${manualCount?` · ${manualCount} manually added`:''} · ${rows.length} total`;
+}
+function renderAnnotations(){layers.annotations.innerHTML='';bondLayer();interactionLayer();labelsLayer();distancesLayer();notesLayer();arrowsLayer();legendLayer();renderInteractionTable();}
 function selectionBounds(kind,o){if(kind==='interaction'||kind==='arrow'||kind==='bond'){const e=interactionEnds(o);return{x:Math.min(e.x1,e.x2),y:Math.min(e.y1,e.y2),w:Math.abs(e.x2-e.x1),h:Math.abs(e.y2-e.y1)};}if(kind==='legend')return{x:o.x-o.w/2-8,y:o.y-o.h/2-7,w:o.w+16,h:o.h+14};if(kind==='label'){const st=residueStyle(o);if(st.shape==='bubble'){const d=residueNodeRadius(o)*2;return{x:o.x-d/2-5,y:o.y-d/2-5,w:d+10,h:d+10};}if(st.shape==='circle'){const d=residueNodeRadius(o)*2;return{x:o.x-d/2,y:o.y-d/2,w:d,h:d};}}return{...rectGeometry(o,8,7)};}
 function resizeHandlesForBounds(kind,o,b){
   if(!['label','distance','note','legend'].includes(kind) || selectedItems.length!==1)return;
