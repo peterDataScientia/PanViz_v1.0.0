@@ -11,3 +11,5 @@ def get_version() -> str:
 
 
 PANVIZ_VERSION = get_version()
+
+PANVIZ_RENDERER_REVISION = "2026.10.01-eight-class"
