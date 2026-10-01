@@ -16,6 +16,13 @@ import streamlit as st
 print("APPCHK 03 — streamlit import OK", flush=True)
 import streamlit.components.v1 as components
 print("APPCHK 04 — streamlit components import OK", flush=True)
+
+# Streamlit Cloud/Linux native-library load-order guard:
+# preload RDKit before PLIP/Open Babel to avoid an Open Babel -> RDKit segfault.
+from rdkit import Chem
+from rdkit.Chem import AllChem, rdDetermineBonds
+print("APPCHK 04R — RDKit preloaded before PLIP/Open Babel", flush=True)
+
 from plip.structure.preparation import PDBComplex
 print("APPCHK 05 — PLIP PDBComplex import OK", flush=True)
 from utils import plip_2d_interactions
