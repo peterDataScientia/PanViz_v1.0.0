@@ -194,10 +194,12 @@ if(interactionToggle){
 const cw=document.getElementById('pv-canvas-w'), ch=document.getElementById('pv-canvas-h');
 const bondWidth=document.getElementById('pv-bond-width'), bondWidthValue=document.getElementById('pv-bond-width-value');
 const interactionWidth=document.getElementById('pv-interaction-width'), interactionWidthValue=document.getElementById('pv-interaction-width-value');
-const LEGEND_TYPES={HPI:{label:'Hydrophobic',color:'#595959',lineWidth:3,dash:'10 5'},HB:{label:'H-bond',color:'#0000E0',lineWidth:3,dash:'10 5'},WB:{label:'Water bridge',color:'#1596B8',lineWidth:3,dash:'3 3'},SB:{label:'Salt bridge',color:'#D900B0',lineWidth:3,dash:'10 5'},PS:{label:'π-Stacking',color:'#008500',lineWidth:3,dash:'10 5'},PC:{label:'π-Cation',color:'#E08000',lineWidth:3,dash:'10 5'},XB:{label:'Halogen bond',color:'#7A5CC7',lineWidth:3,dash:'6 4'},MC:{label:'Metal coordination',color:'#A45700',lineWidth:3,dash:'2 3'},BOND:{label:'Bond',color:'#000000',lineWidth:3,dash:''},CUSTOM:{label:'Custom',color:'#111111',lineWidth:3,dash:'10 5'}};
+const LEGEND_ORDER=['HPI','HB','WB','SB','PS','PC','XB','MC'];
+const LEGEND_TYPES={HPI:{label:'Hydrophobic contact',color:'#595959',lineWidth:3,dash:'10 5'},HB:{label:'Hydrogen bond',color:'#0000E0',lineWidth:3,dash:'10 5'},WB:{label:'Water bridge',color:'#1596B8',lineWidth:3,dash:'3 3'},SB:{label:'Salt bridge',color:'#D900B0',lineWidth:3,dash:'10 5'},PS:{label:'π-Stacking',color:'#008500',lineWidth:3,dash:'10 5'},PC:{label:'π-Cation',color:'#E08000',lineWidth:3,dash:'10 5'},XB:{label:'Halogen bond',color:'#7A5CC7',lineWidth:3,dash:'6 4'},MC:{label:'Metal coordination',color:'#A45700',lineWidth:3,dash:'2 3'},BOND:{label:'Bond',color:'#000000',lineWidth:3,dash:''},CUSTOM:{label:'Custom',color:'#111111',lineWidth:3,dash:'10 5'}};
 function legendTypeDefaults(type){return LEGEND_TYPES[String(type||'CUSTOM').toUpperCase()]||LEGEND_TYPES.CUSTOM;}
 function uniqueLegendItemId(){return `legend_item_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;}
-function addLegendItem(type='CUSTOM',labelText=null){if(!state.legend)return null;const d=legendTypeDefaults(type);const item={id:uniqueLegendItemId(),type:String(type||'CUSTOM').toUpperCase(),label:String(labelText||d.label),color:d.color,lineWidth:d.lineWidth,dash:d.dash,visible:true};state.legend.items=state.legend.items||[];state.legend.items.push(item);measureLegend(state.legend);return item;}
+function legendOrderIndex(type){const i=LEGEND_ORDER.indexOf(String(type||'').toUpperCase());return i<0?999:i;}
+function addLegendItem(type='CUSTOM',labelText=null){if(!state.legend)return null;const d=legendTypeDefaults(type);const item={id:uniqueLegendItemId(),type:String(type||'CUSTOM').toUpperCase(),label:String(labelText||d.label),color:d.color,lineWidth:d.lineWidth,dash:d.dash,visible:true};state.legend.items=state.legend.items||[];const idx=state.legend.items.findIndex(x=>legendOrderIndex(x.type)>legendOrderIndex(item.type));if(idx>=0)state.legend.items.splice(idx,0,item);else state.legend.items.push(item);measureLegend(state.legend);return item;}
 function legendItemById(id){return (state.legend?.items||[]).find(x=>x.id===id)||null;}
 function ensureLegendItem(type,labelText=null){if(!state.legend)return null;const key=String(type||'CUSTOM').toUpperCase();const existing=(state.legend.items||[]).find(x=>String(x.type||'CUSTOM').toUpperCase()===key&&x.visible!==false);if(existing)return existing;return addLegendItem(key,labelText);}
 function removeLegendItem(id){if(!state.legend)return false;const arr=state.legend.items||[];const i=arr.findIndex(x=>x.id===id);if(i<0)return false;arr.splice(i,1);measureLegend(state.legend);return true;}
@@ -443,20 +445,25 @@ function arrowsLayer(){
 function legendLayer(){
   const g=el('g',{id:'pv-legend'});const l=state.legend;
   if(!l||l.visible===false){layers.annotations.appendChild(g);return;}
+  const layout=legendLayout(l);l.w=layout.w;l.h=layout.h;
   const ox=Number(l._originX ?? l.x),oy=Number(l._originY ?? l.y);
   const dx=Number(l.x)-ox,dy=Number(l.y)-oy;
   const outer=el('g',{'data-object-id':'legend','data-object-type':'legend',transform:`translate(${dx} ${dy})`});
   const rotgrp=el('g',{class:'pv-legend-rot',transform:`rotate(${l.rotation||0} ${ox} ${oy})`});
   const box=el('rect',{x:ox-l.w/2,y:oy-l.h/2,width:l.w,height:l.h,fill:l.backgroundColor||'#ffffff','fill-opacity':String(l.backgroundOpacity??0.98),stroke:l.borderColor||'#111','stroke-width':Number(l.borderWidth??1.35),rx:Number(l.cornerRadius||4)});
   rotgrp.appendChild(box);
-  let cursor=ox-l.w/2+12;const fs=Number(l.fontSize||14);
-  for(const item of (l.items||[]).filter(it=>it.visible!==false)){
-    const sampleW=34;const sampleY=oy-3;
-    rotgrp.appendChild(el('line',{x1:cursor,y1:sampleY,x2:cursor+sampleW,y2:sampleY,stroke:item.color||'#111','stroke-width':Number(item.lineWidth??3),'stroke-dasharray':item.dash||'','stroke-linecap':'butt'}));
-    cursor+=sampleW+9;
-    const t=el('text',{x:cursor,y:oy+fs*.14,'font-family':l.fontFamily||'Arial','font-size':fs,'font-weight':l.bold?'700':'400','font-style':l.italic?'italic':'normal','text-decoration':l.underline?'underline':'none',fill:l.textColor||'#111','data-legend-item-id':item.id});
-    t.textContent=String(item.label||'');rotgrp.appendChild(t);
-    cursor+=Math.max(48,String(item.label||'').length*Math.max(7,fs*.56))+24;
+  let baseline=oy-l.h/2+layout.vPad+layout.fs;
+  for(const row of layout.rows){
+    let cursor=ox-row.width/2;
+    for(const entry of row.items){
+      const item=entry.item,sampleY=baseline-layout.fs*.38;
+      rotgrp.appendChild(el('line',{x1:cursor,y1:sampleY,x2:cursor+layout.sample,y2:sampleY,stroke:item.color||'#111','stroke-width':Number(item.lineWidth??3),'stroke-dasharray':item.dash||'','stroke-linecap':'butt'}));
+      cursor+=layout.sample+layout.textGap;
+      const t=el('text',{x:cursor,y:baseline,'font-family':l.fontFamily||'Arial','font-size':layout.fs,'font-weight':l.bold?'700':'400','font-style':l.italic?'italic':'normal','text-decoration':l.underline?'underline':'none',fill:l.textColor||'#111','data-legend-item-id':item.id});
+      t.textContent=String(item.label||'');rotgrp.appendChild(t);
+      cursor+=Math.max(48,String(item.label||'').length*Math.max(7,layout.fs*.56))+layout.itemGap;
+    }
+    baseline+=layout.lineH+layout.rowGap;
   }
   const hit=el('rect',{x:ox-l.w/2-8,y:oy-l.h/2-8,width:l.w+16,height:l.h+16,...annotationHitAttrs()});
   hit.addEventListener('pointerdown',ev=>begin(ev,'legend','legend'));
@@ -631,7 +638,25 @@ function updateSelectedInteractionDom(){const z=currentSelection();if(!z||z.kind
 function toggleTextStyle(prop){const z=currentSelection();if(!z)return;pushUndo();z.obj[prop]=!z.obj[prop];z.obj.styleOverrides=z.obj.styleOverrides||{};if(prop==='bold')z.obj.styleOverrides.fontWeight=z.obj.bold?700:400;measure(z.obj,z.kind==='label'?z.obj.text:z.obj.displayText);renderAnnotations();renderSelection();showRibbon();positionRibbon();}
 function setFontSize(v){const z=currentSelection();if(!z||!(z.kind==='label'||z.kind==='distance'||z.kind==='note'))return;pushUndo();z.obj.fontSize=clamp(Number(v)||16,6,72);z.obj.styleOverrides=z.obj.styleOverrides||{};z.obj.styleOverrides.fontSize=z.obj.fontSize;measure(z.obj,z.kind==='label'?z.obj.text:z.obj.displayText);renderAnnotations();renderSelection();showRibbon();positionRibbon();}
 function changeFont(delta){const z=currentSelection();if(!z||!(z.kind==='label'||z.kind==='distance'||z.kind==='note'))return;setFontSize((z.obj.fontSize||16)+delta);}
-function measureLegend(l){if(!l)return;const fs=Number(l.fontSize||14);const charW=Math.max(7,fs*.56);const sample=34,textGap=9,itemGap=24,hPad=12;const items=(l.items||[]).filter(it=>it.visible!==false);let w=hPad*2;for(const item of items){w+=sample+textGap+Math.max(48,String(item.label||'').length*charW)+itemGap;}if(items.length)w-=itemGap;l.w=Math.max(100,w);l.h=Math.max(28,fs+16);}
+function legendLayout(l){
+  const fs=Number(l?.fontSize||14),charW=Math.max(7,fs*.56),sample=34,textGap=9,itemGap=24,hPad=12,vPad=8,rowGap=7,lineH=fs+6;
+  const items=(l?.items||[]).filter(it=>it.visible!==false);
+  const maxW=Math.max(260,Math.min(Number(state.width||1200)-80,900));
+  const maxContent=Math.max(100,maxW-hPad*2);
+  const rows=[];let row=[],rowW=0;
+  for(const item of items){
+    const itemW=sample+textGap+Math.max(48,String(item.label||'').length*charW);
+    const added=row.length?itemGap+itemW:itemW;
+    if(row.length && rowW+added>maxContent){rows.push({items:row,width:rowW});row=[];rowW=0;}
+    row.push({item,width:itemW});rowW+=(rowW?itemGap:0)+itemW;
+  }
+  if(row.length)rows.push({items:row,width:rowW});
+  const contentW=rows.length?Math.max(...rows.map(r=>r.width)):76;
+  const w=Math.max(100,Math.min(maxW,contentW+hPad*2));
+  const h=Math.max(28,rows.length?rows.length*lineH+(rows.length-1)*rowGap+vPad*2:fs+16);
+  return{fs,sample,textGap,itemGap,hPad,vPad,rowGap,lineH,rows,w,h};
+}
+function measureLegend(l){if(!l)return;const g=legendLayout(l);l.w=g.w;l.h=g.h;}
 function setLegendFont(v){if(!state.legend)return;pushUndo();state.legend.fontSize=clamp(Number(v)||14,6,40);measureLegend(state.legend);renderAnnotations();renderSelection();showRibbon();positionRibbon();}
 function rotateSelected(delta){const z=currentSelection();if(!z)return;if(z.kind==='bond'&&isProtectedMolecularBond(z.obj)){status.textContent='Molecular structure is read-only. Copy the bond first.';return;}pushUndo();z.obj.rotation=normAngle(Number(z.obj.rotation||0)+delta);if(z.kind==='interaction')renderAnnotations();else renderAnnotations();renderSelection();showRibbon();positionRibbon();}
 function beginRotate(evt,kind,id){
