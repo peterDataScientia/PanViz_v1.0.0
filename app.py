@@ -28,7 +28,7 @@ print("APPCHK 05 — PLIP PDBComplex import OK", flush=True)
 from utils import plip_2d_interactions
 print("APPCHK 06 — utils import OK", flush=True)
 from interactive_engine import build_editor_scene
-from scientific_records import build_scientific_records, write_scientific_exports
+from scientific_records import build_scientific_records, build_figure_records, write_scientific_exports
 from panviz_version import PANVIZ_VERSION
 print("APPCHK 07 — interactive_engine + v6 scientific data layer import OK", flush=True)
 
@@ -322,9 +322,11 @@ def _write_project_manifest(result, manifest_path):
         "pose_index": result.get("pose_index"),
         "pose_score_kcal_mol": result.get("pose_score"),
         "binding_site_count": result["binding_site_count"],
-        "interaction_count": int(len(result["interaction_df"])),
-        "residue_count": int(result["interaction_df"]["Residue"].nunique()) if not result["interaction_df"].empty else 0,
-        "interaction_types": sorted(result["interaction_df"]["Interaction"].dropna().unique().tolist()) if not result["interaction_df"].empty else [],
+        "figure_interaction_count": int(len(result["figure_interaction_df"])),
+        "figure_residue_count": int(result["figure_interaction_df"]["Residue"].nunique()) if not result["figure_interaction_df"].empty else 0,
+        "figure_interaction_types": sorted(result["figure_interaction_df"]["Interaction"].dropna().unique().tolist()) if not result["figure_interaction_df"].empty else [],
+        "total_plip_record_count": int(len(result["scientific_df"])),
+        "total_plip_interaction_types": sorted(result["scientific_df"]["Interaction"].dropna().unique().tolist()) if not result["scientific_df"].empty else [],
         "scientific_record_signature_sha256": result.get("scientific_signature"),
         "publication_renderer_baseline": "237db30af8639379ed3976657f9bbcce28110725",
         "renderer_scene_schema_version": result.get("scene", {}).get("version"),
@@ -440,13 +442,14 @@ if analyze:
             plip_2d_interactions(str(pdb_path),selected_site,save_files=True,save_pymol=False,canvas_height=int(out_height),canvas_width=int(out_width),out_name="PanViz_interactions.svg",output_dir=str(results_root),analysis=analysis_obj)
             site_dir=results_root/selected_site.replace(":","_")
             png_path=site_dir/"figures"/"PanViz_interactions.png";svg_path=site_dir/"figures"/"PanViz_interactions.svg";interaction_dir=site_dir/"interactions"
-            interaction_df,scientific_tables=build_scientific_records(analysis_obj["my_interactions"])
+            scientific_df,scientific_tables=build_scientific_records(analysis_obj["my_interactions"])
             scientific_exports=write_scientific_exports(
-                interaction_df,
+                scientific_df,
                 scientific_tables,
                 interaction_dir,
             )
             scene,scene_root=build_editor_scene(str(pdb_path),selected_site,width=int(out_width),height=int(out_height),base_svg=svg_path.read_text(encoding="utf-8"),analysis=analysis_obj)
+            figure_df=build_figure_records(scene)
             (site_dir/"PanViz_initial_layout.json").write_text(json.dumps(scene,indent=2,ensure_ascii=False),encoding="utf-8")
             result={
                 "key": result_key,
@@ -461,7 +464,9 @@ if analyze:
                 "pose_index": pose_index,
                 "pose_score": pose_score,
                 "binding_site_count": len(binding_sites),
-                "interaction_df": interaction_df,
+                "interaction_df": figure_df,
+                "figure_interaction_df": figure_df,
+                "scientific_df": scientific_df,
                 "png_path": str(png_path),
                 "svg_path": str(svg_path),
                 "site_dir": str(site_dir),
@@ -500,39 +505,47 @@ if not result or result.get("key")!=result_key:
     st.info("Configure the analysis above, then click **Generate PanViz interaction diagram**. Generated results remain available until you change the input, pose, binding site, or canvas size.")
     st.stop()
 
-png_path=Path(result["png_path"]); svg_path=Path(result["svg_path"]); site_dir=Path(result["site_dir"]); interaction_df=result["interaction_df"]
+png_path=Path(result["png_path"]); svg_path=Path(result["svg_path"]); site_dir=Path(result["site_dir"]); interaction_df=result["figure_interaction_df"]; scientific_df=result["scientific_df"]
 
 st.markdown('<div class="panviz-section"><h4>3 · Interactive figure editor</h4>', unsafe_allow_html=True)
 render_editor(result["scene"])
 st.caption(f"v{PANVIZ_VERSION}: the approved publication renderer is preserved; imported molecular structure and PLIP scientific records remain immutable while only the presentation layer is editable.")
 st.markdown("</div>", unsafe_allow_html=True)
 
-st.markdown('<div class="panviz-section"><h4>4 · Scientific interaction records</h4>', unsafe_allow_html=True)
+st.markdown('<div class="panviz-section"><h4>4 · Figure interaction records</h4>', unsafe_allow_html=True)
 rec1,rec2,rec3,rec4=st.columns(4)
-rec1.metric("Interactions",len(interaction_df));rec2.metric("Residues",interaction_df["Residue"].nunique() if not interaction_df.empty else 0);rec3.metric("Interaction types",interaction_df["Interaction"].nunique() if not interaction_df.empty else 0);rec4.metric("Binding sites",result["binding_site_count"])
+rec1.metric("Interactions in figure",len(interaction_df));rec2.metric("Residues in figure",interaction_df["Residue"].nunique() if not interaction_df.empty else 0);rec3.metric("Figure interaction types",interaction_df["Interaction"].nunique() if not interaction_df.empty else 0);rec4.metric("Binding sites",result["binding_site_count"])
 
 if not interaction_df.empty:
-    display_columns=[
-        "Record ID",
-        "Residue",
-        "Interaction",
-        "Distance (Å)",
-        "Rendered in figure",
-    ]
     st.dataframe(
-        interaction_df[display_columns],
+        interaction_df,
         use_container_width=True,
         hide_index=True,
         height=min(720, max(320, 38 * (len(interaction_df) + 1))),
     )
-    nonrendered=int((~interaction_df["Rendered in figure"]).sum())
-    if nonrendered:
-        st.caption(
-            f"{nonrendered} PLIP record(s) belong to interaction classes preserved in the v6 scientific record layer "
-            "but not yet drawn by the protected publication renderer."
-        )
 else:
-    st.info("No PLIP interaction records were returned for this binding site.")
+    st.info("No interaction records are represented in this figure.")
+
+extra_count=max(0, len(scientific_df)-len(interaction_df))
+with st.expander(
+    f"Complete PLIP scientific records ({len(scientific_df)} total"
+    + (f"; {extra_count} additional to figure" if extra_count else "")
+    + ")",
+    expanded=False,
+):
+    st.caption(
+        "This complete scientific table may include PLIP classes not currently drawn by the protected publication renderer. "
+        "The main table above is the authoritative record of interactions represented in the figure."
+    )
+    if not scientific_df.empty:
+        st.dataframe(
+            scientific_df[["Record ID","Residue","Interaction","Code","Distance (Å)","Rendered in figure"]],
+            use_container_width=True,
+            hide_index=True,
+            height=min(520, max(240, 34 * (len(scientific_df) + 1))),
+        )
+    else:
+        st.info("No PLIP scientific records were returned for this binding site.")
 
 with st.expander("Downloads & project files", expanded=False):
     zpath=Path(result["project_zip"])
@@ -569,7 +582,7 @@ with st.expander("Downloads & project files", expanded=False):
         if not interaction_df.empty:
             st.download_button(
                 "Scientific records CSV",
-                data=interaction_df.to_csv(index=False).encode("utf-8"),
+                data=scientific_df.to_csv(index=False).encode("utf-8"),
                 file_name=f"{source_stem}_{selected_site.replace(':','_')}_scientific_records.csv",
                 mime="text/csv",
                 use_container_width=True,
