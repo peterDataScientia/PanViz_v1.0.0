@@ -158,6 +158,13 @@ def _distance_text(distance):
         return None
     return f"{float(distance):.2f} Å"
 
+
+def _as_bool(value):
+    """Interpret PLIP boolean fields robustly after in-memory or CSV-like conversion."""
+    if isinstance(value, (bool, np.bool_)):
+        return bool(value)
+    return str(value).strip().lower() in {"1", "true", "t", "yes", "y"}
+
 def _get_interactions(
         input_pdb,
         hydrophobic_df,
@@ -240,7 +247,7 @@ def _get_interactions(
 
     # Water bridges: anchor at the ligand donor/acceptor atom reported by PLIP.
     for _, row in waterbridge_df.iterrows():
-        protisdon = bool(row["PROTISDON"])
+        protisdon = _as_bool(row["PROTISDON"])
         ligand_idx = int(row["ACCEPTOR_IDX"] if protisdon else row["DONOR_IDX"])
         atom = input_pdb.atoms[ligand_idx - 1].OBAtom
         int_atom = atom.GetResidue().GetAtomID(atom).strip()
