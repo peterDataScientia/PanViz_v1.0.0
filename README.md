@@ -61,6 +61,13 @@ These fields are not modified by presentation editing.
 - original molecular drawing remains locked to the source representation; original covalent bonds are copy-only sources for standalone graphical bonds
 - interaction type and per-object line styling
 
+### Publication legend
+- The publication legend uses a fixed scientific order: HPI → HB → WB → SB → PS → PC → XB → MC.
+- Labels use publication terminology such as **Hydrophobic contact** and **Hydrogen bond**.
+- Only interaction types present in the current figure are shown.
+- The publication legend automatically wraps into centered rows when needed, preventing long eight-class legends from extending beyond the canvas.
+- Existing interaction line styles remain unchanged.
+
 ### Live interaction table and export
 - The interactive editor is the single figure surface; a duplicate static figure is not shown or offered separately for download.
 - One live interaction table is rendered directly below the editor.
