@@ -276,33 +276,6 @@ def _build_pdbqt_complex(receptor_path, ligand_path, work_root, pose_index=0):
     combined.write_text("\n".join(receptor_lines + ["TER"] + ligand_lines + ["END"]) + "\n", encoding="utf-8")
     return combined, len(blocks)
 
-def _first_col(df, names):
-    lookup={str(c).lower():c for c in df.columns}
-    for name in names:
-        if name.lower() in lookup:return lookup[name.lower()]
-    return None
-
-def _read_interactions(interaction_dir):
-    mapping={"HPI":"Hydrophobic interaction","HB":"Hydrogen bond","PS":"π-Stacking","PC":"π-Cation","SB":"Salt bridge"}
-    rows=[]
-    for path in sorted(Path(interaction_dir).glob("*.csv")):
-        code=path.stem.rsplit("_",1)[-1]
-        if code not in mapping: continue
-        df=pd.read_csv(path)
-        if df.empty: continue
-        rt=_first_col(df,["RESTYPE","restype"]);rn=_first_col(df,["RESNR","resnr"]);rc=_first_col(df,["RESCHAIN","reschain"]);dist=_first_col(df,["DIST","distance","distance_ad","distance_ah","dist"])
-        for _,r in df.iterrows():
-            residue=""
-            if rt is not None and pd.notna(r[rt]):residue+=str(r[rt]).strip()
-            if rn is not None and pd.notna(r[rn]):residue+=str(r[rn]).strip()
-            if rc is not None and pd.notna(r[rc]):residue+=str(r[rc]).strip()
-            d=None
-            if dist is not None:
-                try:d=float(r[dist])
-                except (TypeError,ValueError):pass
-            rows.append({"Residue":residue or "—","Interaction":mapping[code],"Distance (Å)":d})
-    return pd.DataFrame(rows)
-
 def _sha256_bytes(data):
     return hashlib.sha256(data).hexdigest()
 
