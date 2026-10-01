@@ -1,3 +1,16 @@
+# PanViz v6.0.0
+
+## Independent canonical engine rewrite
+- Replaced the active legacy renderer with `panviz_engine.py`.
+- Removed `utils.py` and `interactive_engine.py` from the active branch.
+- PLIP is now used as the scientific interaction source; PanViz owns canonical normalization, ligand depiction, deterministic radial layout, scene construction, routing, editing, and export.
+- Added all eight PLIP interaction classes: HPI, HB, WB, SB, PS, PC, XB, and MC.
+- Removed visualization-time `DetermineBonds(..., charge=0)` and neutral-pH rewriting.
+- Switched static SVG/PNG output to the same canonical scene used by the interactive editor.
+- Replaced the legacy CLI with the PanViz 6 engine workflow.
+- Added automated CI/regression tests and provenance documentation.
+- Fixed docking PDBQT ligand serial numbering so appended ligand atoms start after the receptor maximum atom serial.
+
 # v5.8.7 — Fully Editable Legend
 
 - Legend entries are first-class editable content: add from a dropdown, remove, reorder, rename, recolor, restyle line width/dash, toggle visibility, and edit legend/background/text styling.
