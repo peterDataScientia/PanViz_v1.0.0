@@ -327,6 +327,7 @@ def _write_project_manifest(result, manifest_path):
         "interaction_types": sorted(result["interaction_df"]["Interaction"].dropna().unique().tolist()) if not result["interaction_df"].empty else [],
         "scientific_record_signature_sha256": result.get("scientific_signature"),
         "publication_renderer_baseline": "237db30af8639379ed3976657f9bbcce28110725",
+        "renderer_scene_schema_version": result.get("scene", {}).get("version"),
         "scientific_data_policy": "PLIP interaction measurements are normalized independently of presentation styling; the approved publication renderer remains unchanged.",
     }
     Path(manifest_path).write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
