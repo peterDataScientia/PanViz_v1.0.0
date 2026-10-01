@@ -629,6 +629,7 @@ def build_editor_scene(pdb_file, bsid, width=1200, height=850, base_svg=None, an
                 "backgroundOpacity": 0.98,
                 "bubbleColor": BUBBLE_COLOR,
                 "colorMode": "neutral",
+                "nodeSize": 60,
             },
             "distance": {
                 "fontFamily": "Arial",
