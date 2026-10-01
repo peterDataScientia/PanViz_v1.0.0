@@ -1,3 +1,4 @@
+print("APPCHK 00 — app.py process entered", flush=True)
 import os
 import shutil
 import tempfile
@@ -8,14 +9,24 @@ import json
 import hashlib
 import zipfile
 from datetime import datetime, timezone
+print("APPCHK 01 — stdlib imports OK", flush=True)
 import pandas as pd
+print("APPCHK 02 — pandas import OK", flush=True)
 import streamlit as st
+print("APPCHK 03 — streamlit import OK", flush=True)
 import streamlit.components.v1 as components
+print("APPCHK 04 — streamlit components import OK", flush=True)
 from plip.structure.preparation import PDBComplex
+print("APPCHK 05 — PLIP PDBComplex import OK", flush=True)
 from utils import plip_2d_interactions
+print("APPCHK 06 — utils import OK", flush=True)
 from interactive_engine import build_editor_scene
+print("APPCHK 07 — interactive_engine import OK", flush=True)
 
+print("APPCHK 08 — before set_page_config", flush=True)
 st.set_page_config(page_title="PanViz v5.8.6", page_icon="🧬", layout="wide", initial_sidebar_state="expanded")
+print("APPCHK 09 — set_page_config OK", flush=True)
+print("APPCHK 10 — before main CSS markdown", flush=True)
 st.markdown("""
 <style>
 :root{--pv-navy:#143761;--pv-blue:#1f5aa6;--pv-ink:#16243a;--pv-muted:#65748b;--pv-line:#dce4ef}
@@ -40,9 +51,14 @@ div[data-testid="stFileUploader"]{border:1px dashed #b8c8de;border-radius:14px;b
 .panviz-foot{color:#7a8798;font-size:.73rem;margin-top:10px}
 </style>
 """, unsafe_allow_html=True)
+print("APPCHK 11 — main CSS markdown OK", flush=True)
+print("APPCHK 12 — before PanViz header markdown", flush=True)
 st.markdown("""<div class="panviz-shell"><div class="panviz-brand"><div class="panviz-mark">🧬</div><div><div class="panviz-title">PanViz</div><div class="panviz-subtitle">PLIP-based protein–ligand interaction visualization &amp; publication figure editor</div></div></div><div class="panviz-badges"><span class="panviz-badge">PLIP interaction analysis</span><span class="panviz-badge">Editable presentation layer</span><span class="panviz-badge">Molecular topology locked</span><span class="panviz-badge">v5.8.6</span></div></div>""", unsafe_allow_html=True)
+print("APPCHK 13 — PanViz header markdown OK", flush=True)
 
+print("APPCHK 14 — before editor.html read", flush=True)
 EDITOR_HTML = (Path(__file__).with_name("editor.html")).read_text(encoding="utf-8")
+print(f"APPCHK 15 — editor.html read OK ({len(EDITOR_HTML)} chars)", flush=True)
 
 def render_editor(scene):
     html = EDITOR_HTML.replace("__PANVIZ_SCENE__", json.dumps(scene, ensure_ascii=False))
@@ -272,19 +288,30 @@ def _write_project_manifest(result, manifest_path):
     Path(manifest_path).write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
+print("APPCHK 16 — before input section markdown", flush=True)
 st.markdown('<div class="panviz-section"><h4>1 · Input structure</h4>', unsafe_allow_html=True)
+print("APPCHK 17 — input section markdown OK", flush=True)
+print("APPCHK 18 — before input_mode radio", flush=True)
 input_mode=st.radio("Input mode",["PDB complex","Docking PDBQT"],horizontal=True)
+print(f"APPCHK 19 — input_mode radio OK ({input_mode})", flush=True)
+print("APPCHK 20 — before tempfile.mkdtemp", flush=True)
 work_root=Path(tempfile.mkdtemp(prefix="panviz_"))
+print(f"APPCHK 21 — tempfile OK ({work_root})", flush=True)
 source_files=[]
 source_payloads=[]
 pose_index=None
 pose_score=None
 
 if input_mode=="PDB complex":
+    print("APPCHK 22 — before PDB file_uploader", flush=True)
     uploaded=st.file_uploader("Upload protein–ligand PDB complex",type=["pdb"],help="Upload a complete PDB complex containing the protein and ligand.")
+    print(f"APPCHK 23 — PDB file_uploader OK (uploaded={uploaded is not None})", flush=True)
     if not uploaded:
+        print("APPCHK 24 — before no-upload info", flush=True)
         st.info("Upload a PDB complex to begin.")
+        print("APPCHK 25 — no-upload info OK", flush=True)
         st.markdown("</div>", unsafe_allow_html=True)
+        print("APPCHK 26 — closing markdown OK; about to st.stop", flush=True)
         st.stop()
     pdb_path=work_root/uploaded.name
     file_bytes=uploaded.getvalue()
