@@ -29,7 +29,7 @@ from utils import plip_2d_interactions
 print("APPCHK 06 — utils import OK", flush=True)
 from interactive_engine import build_editor_scene
 from scientific_records import build_scientific_records, build_figure_records, write_scientific_exports
-from panviz_version import PANVIZ_VERSION
+from panviz_version import PANVIZ_VERSION, PANVIZ_RENDERER_REVISION
 print("APPCHK 07 — interactive_engine + v6 scientific data layer import OK", flush=True)
 
 print("APPCHK 08 — before set_page_config", flush=True)
@@ -330,6 +330,7 @@ def _write_project_manifest(result, manifest_path):
         "scientific_record_signature_sha256": result.get("scientific_signature"),
         "publication_renderer_baseline": "237db30af8639379ed3976657f9bbcce28110725",
         "renderer_scene_schema_version": result.get("scene", {}).get("version"),
+        "renderer_revision": PANVIZ_RENDERER_REVISION,
         "scientific_data_policy": "PLIP interaction measurements are normalized independently of presentation styling; the approved publication renderer remains unchanged.",
     }
     Path(manifest_path).write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -425,6 +426,7 @@ st.markdown("</div>", unsafe_allow_html=True)
 
 result_key_payload = {
     "panviz_version": PANVIZ_VERSION,
+    "renderer_revision": PANVIZ_RENDERER_REVISION,
     "mode": input_mode,
     "source_hashes": [_sha256_bytes(x[1]) for x in source_payloads],
     "pose": pose_index,
