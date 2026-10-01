@@ -6,6 +6,11 @@ logic is retained from the supplied original PLIPViz utility.
 """
 
 print("UTILCHK 00 — utils.py entered", flush=True)
+print("UTILCHK 00R — preloading RDKit before PLIP/Open Babel", flush=True)
+from rdkit import Chem
+from rdkit.Chem import AllChem, rdDetermineBonds
+print("UTILCHK 00S — RDKit preload OK", flush=True)
+
 from plip.basic import config
 print("UTILCHK 01 — plip.basic.config OK", flush=True)
 from plip.structure.preparation import PDBComplex
@@ -39,10 +44,8 @@ print("UTILCHK 10 — before openbabel.pybel", flush=True)
 from openbabel import pybel
 print("UTILCHK 11 — openbabel.pybel OK", flush=True)
 
-print("UTILCHK 12 — before RDKit Chem", flush=True)
-from rdkit import Chem
+print("UTILCHK 12 — RDKit already preloaded safely", flush=True)
 print("UTILCHK 13 — RDKit Chem OK", flush=True)
-from rdkit.Chem import AllChem
 print("UTILCHK 14 — RDKit AllChem OK", flush=True)
 
 print("UTILCHK 15 — before cairo", flush=True)
@@ -60,8 +63,7 @@ except Exception as exc:
 import os
 import tempfile
 print("UTILCHK 19 — os/tempfile OK", flush=True)
-from rdkit.Chem import rdDetermineBonds
-print("UTILCHK 20 — rdDetermineBonds OK", flush=True)
+print("UTILCHK 20 — rdDetermineBonds already preloaded OK", flush=True)
 
 config.NOHYDRO = True
 ob = pybel.ob
