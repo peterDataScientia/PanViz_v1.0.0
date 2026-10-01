@@ -17,17 +17,27 @@ The following must remain visually unchanged unless a deliberate publication-des
 
 Refactoring, renaming, moving code between modules, improving scientific-data handling, adding tests, fixing PDBQT processing, improving exports and changing non-visual architecture are allowed **only if the approved rendered appearance remains equivalent**.
 
-## Baseline
+## Baselines
 
-The protected baseline is Git commit:
+The original five-class publication baseline is Git commit:
 
 `237db30af8639379ed3976657f9bbcce28110725`
 
-A safety branch was created:
+Safety branch:
 
 `publication-renderer-baseline-2026-10-01`
 
-At that baseline:
+The approved PanViz 6 eight-class renderer baseline is:
+
+`3c6a3390f65c5f30ccb367b52cf916cd5683d0e6`
+
+Safety branch:
+
+`publication-renderer-eight-class-baseline-2026-10-01`
+
+The legacy baseline remains the reference for proving that HPI/HB/SB/PS/PC molecule/residue geometry was not redesigned. The eight-class baseline is the active reference for future releases.
+
+At the renderer baseline:
 
 - `utils.py::_draw_mol` defines the static publication renderer.
 - `interactive_engine.py::_exact_panviz_layout` reproduces its established residue, interaction and distance geometry for the editor.
