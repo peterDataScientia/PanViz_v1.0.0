@@ -148,3 +148,10 @@ Existing PLIP interaction records remain the scientific source. Editing their pr
 
 ### Canvas rule
 Canvas width/height controls are intentionally disabled. Object-level editing happens inside the fixed scientific figure coordinate system so the original molecular geometry cannot be altered accidentally through page scaling.
+
+
+## Publication renderer contract
+
+PanViz treats the current molecule, residue, interaction, distance-label and legend appearance as a protected publication-quality renderer. Code may be refactored or renamed, and non-visual systems may evolve, but visual changes to this renderer are not permitted as incidental side effects.
+
+The approved visual baseline and regression policy are documented in `PUBLICATION_RENDERER_CONTRACT.md`. CI checks a golden geometry snapshot plus publication style invariants on every push and pull request.
