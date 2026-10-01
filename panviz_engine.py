@@ -203,7 +203,7 @@ def _build_ligand_graph(pdb_path: str | Path, binding_site: str):
 
     if mol is None:
         # Fallback uses only PDB connectivity/proximity perception. It deliberately
-        # avoids rdDetermineBonds and therefore never imposes charge=0.
+        # avoids rdDetermineBonds and therefore never imposes a fixed total charge.
         mol = Chem.MolFromPDBBlock(
             block,
             sanitize=True,
