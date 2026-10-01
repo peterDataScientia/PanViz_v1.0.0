@@ -1,3 +1,15 @@
+# v6.0.0 — Architecture Upgrade, Publication Renderer Preserved
+
+- Promoted the application to PanViz 6.0.0 while retaining the approved publication renderer and editor geometry unchanged from baseline commit `237db30af8639379ed3976657f9bbcce28110725`.
+- Added a canonical scientific-record layer that preserves all eight PLIP interaction classes and exports unified CSV/JSON records.
+- Added a presentation-independent SHA-256 scientific-record signature to project manifests.
+- Fixed PDBQT complex assembly so ligand atom serials begin after the receptor maximum serial.
+- Reused one temporary workspace per Streamlit session instead of creating a new directory on every rerun.
+- Centralized version loading through `VERSION.txt` / `panviz_version.py`.
+- Made PyMOL opt-in for the command-line workflow.
+- Added automated v6 architecture tests alongside the golden publication-renderer regression guard.
+- The renderer scene schema remains separately recorded for compatibility; application version changes do not imply visual-renderer changes.
+
 # v5.8.7 — Fully Editable Legend
 
 - Legend entries are first-class editable content: add from a dropdown, remove, reorder, rename, recolor, restyle line width/dash, toggle visibility, and edit legend/background/text styling.
