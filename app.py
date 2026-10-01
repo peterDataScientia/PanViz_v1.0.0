@@ -20,18 +20,20 @@ print("APPCHK 04 — streamlit components import OK", flush=True)
 # Streamlit Cloud/Linux native-library load-order guard:
 # preload RDKit before PLIP/Open Babel to avoid an Open Babel -> RDKit segfault.
 from rdkit import Chem
-from rdkit.Chem import AllChem, rdDetermineBonds
 print("APPCHK 04R — RDKit preloaded before PLIP/Open Babel", flush=True)
 
 from plip.structure.preparation import PDBComplex
 print("APPCHK 05 — PLIP PDBComplex import OK", flush=True)
-from utils import plip_2d_interactions
-print("APPCHK 06 — utils import OK", flush=True)
-from interactive_engine import build_editor_scene
-print("APPCHK 07 — interactive_engine import OK", flush=True)
+from panviz_engine import (
+    PANVIZ_ENGINE_VERSION,
+    build_editor_scene,
+    run_panviz_analysis,
+    write_static_exports,
+)
+print("APPCHK 06 — independent PanViz engine import OK", flush=True)
 
 print("APPCHK 08 — before set_page_config", flush=True)
-st.set_page_config(page_title="PanViz v5.8.6", page_icon="🧬", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="PanViz v6.0.0", page_icon="🧬", layout="wide", initial_sidebar_state="expanded")
 print("APPCHK 09 — set_page_config OK", flush=True)
 print("APPCHK 10 — before main CSS markdown", flush=True)
 st.markdown("""
@@ -60,7 +62,7 @@ div[data-testid="stFileUploader"]{border:1px dashed #b8c8de;border-radius:14px;b
 """, unsafe_allow_html=True)
 print("APPCHK 11 — main CSS markdown OK", flush=True)
 print("APPCHK 12 — before PanViz header markdown", flush=True)
-st.markdown("""<div class="panviz-shell"><div class="panviz-brand"><div class="panviz-mark">🧬</div><div><div class="panviz-title">PanViz</div><div class="panviz-subtitle">PLIP-based protein–ligand interaction visualization &amp; publication figure editor</div></div></div><div class="panviz-badges"><span class="panviz-badge">PLIP interaction analysis</span><span class="panviz-badge">Editable presentation layer</span><span class="panviz-badge">Molecular topology locked</span><span class="panviz-badge">v5.8.6</span></div></div>""", unsafe_allow_html=True)
+st.markdown("""<div class="panviz-shell"><div class="panviz-brand"><div class="panviz-mark">🧬</div><div><div class="panviz-title">PanViz</div><div class="panviz-subtitle">PLIP-based protein–ligand interaction visualization &amp; publication figure editor</div></div></div><div class="panviz-badges"><span class="panviz-badge">PLIP interaction analysis</span><span class="panviz-badge">Editable presentation layer</span><span class="panviz-badge">Molecular topology locked</span><span class="panviz-badge">v6.0.0</span></div></div>""", unsafe_allow_html=True)
 print("APPCHK 13 — PanViz header markdown OK", flush=True)
 
 print("APPCHK 14 — before editor.html read", flush=True)
@@ -191,7 +193,7 @@ def _convert_with_obabel(input_path, output_path, input_format, selected_block=N
         # Cleanup failure must not mask a successful Open Babel conversion.
         _safe_remove(cleanup)
 
-def _normalize_docked_ligand_pdb(pdb_path, out_path, chain="Z", residue_number=900, residue_name="LIG"):
+def _normalize_docked_ligand_pdb(pdb_path, out_path, chain="Z", residue_number=900, residue_name="LIG", start_serial=1):
     """Normalize a converted docking pose into a PLIP-friendly ligand residue.
 
     Atom serials are rewritten consistently and any CONECT records emitted by Open Babel
@@ -199,7 +201,7 @@ def _normalize_docked_ligand_pdb(pdb_path, out_path, chain="Z", residue_number=9
     """
     lines = Path(pdb_path).read_text(encoding="utf-8", errors="replace").splitlines()
     atom_lines=[]; conect=[]; serial_map={}
-    serial=1
+    serial=max(1, int(start_serial))
     for line in lines:
         if line.startswith(("ATOM", "HETATM")):
             s=line.ljust(80)
@@ -255,7 +257,18 @@ def _build_pdbqt_complex(receptor_path, ligand_path, work_root, pose_index=0):
         raise ValueError(f"Docking pose {pose_index + 1} is outside the available range (1–{len(blocks)}).")
     _convert_with_obabel(ligand_path, ligand_pdb_raw, "pdbqt", selected_block=blocks[pose_index])
     _validate_pdb_has_atoms(ligand_pdb_raw, "ligand / docking pose")
-    _normalize_docked_ligand_pdb(ligand_pdb_raw, ligand_pdb)
+
+    receptor_serials=[]
+    for line in receptor_pdb.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith(("ATOM","HETATM")):
+            try: receptor_serials.append(int(line[6:11]))
+            except ValueError: pass
+    ligand_start=(max(receptor_serials)+1) if receptor_serials else 1
+    _normalize_docked_ligand_pdb(
+        ligand_pdb_raw,
+        ligand_pdb,
+        start_serial=ligand_start,
+    )
 
     combined = work_root / "panviz_pdbqt_complex.pdb"
     receptor_lines=[x for x in receptor_pdb.read_text(encoding="utf-8", errors="replace").splitlines() if x[:6].strip() in {"ATOM", "HETATM", "TER"}]
@@ -337,7 +350,7 @@ def _write_project_manifest(result, manifest_path):
         "interaction_count": int(len(result["interaction_df"])),
         "residue_count": int(result["interaction_df"]["Residue"].nunique()) if not result["interaction_df"].empty else 0,
         "interaction_types": sorted(result["interaction_df"]["Interaction"].dropna().unique().tolist()) if not result["interaction_df"].empty else [],
-        "scientific_data_policy": "PLIP interaction measurements are not altered by editor styling.",
+        "scientific_data_policy": "PLIP interaction measurements are normalized once into an immutable canonical record model; editor styling does not alter those records.",
     }
     Path(manifest_path).write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
 
@@ -426,7 +439,7 @@ with left:selected_site=st.selectbox("Ligand / binding site",binding_sites)
 with right:out_width=st.number_input("Figure width",min_value=700,max_value=3000,value=1200,step=100)
 out_height=st.number_input("Figure height",min_value=500,max_value=3000,value=850,step=50)
 analyze=st.button("Generate PanViz interaction diagram",type="primary",use_container_width=True)
-st.caption("One PLIP analysis is reused for the original figures and the interactive editor; alternate exports do not trigger a second scientific analysis.")
+st.caption("One PLIP analysis feeds the canonical PanViz 6 scene, interaction table, and all static/editor exports; no second scientific analysis is performed.")
 st.markdown("</div>", unsafe_allow_html=True)
 
 result_key_payload = {
@@ -443,12 +456,23 @@ if analyze:
     results_root=work_root/"PanViz_results";results_root.mkdir(parents=True,exist_ok=True)
     with st.spinner("Running PLIP once and generating PanViz outputs…"):
         try:
-            analysis_obj=plip_2d_interactions(str(pdb_path),selected_site,save_files=True,save_pymol=False,canvas_height=int(out_height),canvas_width=int(out_width),out_name="PanViz_interactions.png",output_dir=str(results_root))
-            plip_2d_interactions(str(pdb_path),selected_site,save_files=True,save_pymol=False,canvas_height=int(out_height),canvas_width=int(out_width),out_name="PanViz_interactions.svg",output_dir=str(results_root),analysis=analysis_obj)
-            site_dir=results_root/selected_site.replace(":","_")
-            png_path=site_dir/"figures"/"PanViz_interactions.png";svg_path=site_dir/"figures"/"PanViz_interactions.svg";interaction_dir=site_dir/"interactions"
-            interaction_df=_read_interactions(interaction_dir)
-            scene,scene_root=build_editor_scene(str(pdb_path),selected_site,width=int(out_width),height=int(out_height),base_svg=svg_path.read_text(encoding="utf-8"),analysis=analysis_obj)
+            analysis_obj=run_panviz_analysis(
+                str(pdb_path),
+                selected_site,
+                output_root=str(results_root),
+            )
+            site_dir=Path(analysis_obj["site_dir"])
+            png_path=site_dir/"figures"/"PanViz_interactions.png"
+            svg_path=site_dir/"figures"/"PanViz_interactions.svg"
+            interaction_df=analysis_obj["interaction_summary"].copy()
+            scene,scene_root=build_editor_scene(
+                str(pdb_path),
+                selected_site,
+                width=int(out_width),
+                height=int(out_height),
+                analysis=analysis_obj,
+            )
+            write_static_exports(scene,svg_path,png_path,png_scale=2)
             (site_dir/"PanViz_initial_layout.json").write_text(json.dumps(scene,indent=2,ensure_ascii=False),encoding="utf-8")
             result={
                 "key": result_key,
@@ -478,9 +502,9 @@ if analyze:
                 target.write_bytes(data)
             project_readme = results_root/"PROJECT_README.md"
             project_readme.write_text(
-                "# PanViz 5.8.6 project bundle\n\n"
-                "This package contains the original uploaded input file(s), the PLIP-prepared complex, "
-                "original PanViz PNG/SVG figures, PLIP interaction CSV tables, the initial editable layout, "
+                "# PanViz 6.0.0 project bundle\n\n"
+                "This package contains the original uploaded input file(s), the PLIP analysis structure, "
+                "PanViz 6 canonical-scene PNG/SVG exports, PLIP interaction CSV tables for all supported classes, the initial editable layout, "
                 "and a machine-readable manifest. Presentation styling in PanViz does not modify the underlying "
                 "PLIP scientific interaction records. Use the editor's **Save layout** and **Load layout** controls "
                 "to carry edited presentation state between sessions.\n",
@@ -504,7 +528,7 @@ png_path=Path(result["png_path"]); svg_path=Path(result["svg_path"]); site_dir=P
 
 st.markdown('<div class="panviz-section"><h4>3 · Interactive figure editor</h4>', unsafe_allow_html=True)
 render_editor(result["scene"])
-st.caption("v5.8.6: the imported molecular structure and PLIP scientific records are immutable; only the separate presentation annotation layer can be edited, saved, reloaded, and exported.")
+st.caption("v6.0.0: the imported molecular structure and PLIP scientific records are immutable; only the separate presentation annotation layer can be edited, saved, reloaded, and exported.")
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="panviz-section"><h4>4 · Scientific interaction records</h4>', unsafe_allow_html=True)
@@ -579,5 +603,5 @@ with st.expander("Downloads & project files", expanded=False):
             use_container_width=True,
         )
 
-st.markdown('</div><div class="panviz-foot">PanViz v5.8.6 · one reusable PLIP analysis → locked molecular scene + editable presentation annotations + scientific interaction records + complete project package.</div>', unsafe_allow_html=True)
+st.markdown('</div><div class="panviz-foot">PanViz v6.0.0 · one reusable PLIP analysis → locked molecular scene + editable presentation annotations + scientific interaction records + complete project package.</div>', unsafe_allow_html=True)
 
