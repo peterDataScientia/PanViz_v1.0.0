@@ -91,3 +91,15 @@ def test_pdf_and_png_share_the_same_export_geometry():
     assert "c.width=xg.width;c.height=xg.height;" in editor
     assert "matching the ${xg.scale}× PNG export size" in editor
     assert '<span class="label">Export scale</span>' in editor
+
+
+def test_legend_layout_does_not_read_state_during_state_initialization():
+    editor = Path("editor.html").read_text(encoding="utf-8")
+
+    start = editor.index("function legendLayout")
+    end = editor.index("function measureLegend", start)
+    legend_layout = editor[start:end]
+
+    assert "state.width" not in legend_layout
+    assert "canvasWidth??l?._canvasWidth??initial?.width??1200" in legend_layout
+    assert "measureLegend(s.legend,s.width);" in editor
