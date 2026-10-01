@@ -111,6 +111,21 @@ def render_editor(scene):
         if (root) observer.observe(root);
       }
 
+      if ('MutationObserver' in window) {
+        const root = document.getElementById('pv-root');
+        if (root) {
+          const mutationObserver = new MutationObserver(() => {
+            requestAnimationFrame(reportHeight);
+          });
+          mutationObserver.observe(root, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            characterData: true
+          });
+        }
+      }
+
       window.addEventListener('resize', reportHeight);
     })();
     </script>
@@ -121,7 +136,7 @@ def render_editor(scene):
     # measured height above.
     canvas_h = int(scene.get("height", 850) or 850)
     initial_h = max(640, min(1800, canvas_h + 120))
-    components.html(html, height=initial_h, scrolling=False)
+    components.html(html, height=initial_h, scrolling=True)
 
 def _eligible_binding_sites(pdb_path):
     mol = PDBComplex(); mol.load_pdb(str(pdb_path)); excluded={"ARN","ASH","GLH","LYN","HIE","HIP"}
