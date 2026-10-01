@@ -1,5 +1,6 @@
 from utils import plip_2d_interactions
 from plip.structure.preparation import PDBComplex
+from panviz_version import PANVIZ_VERSION
 import argparse
 
 
@@ -75,6 +76,12 @@ PanViz -f complex.pdb -y -o ligand_interactions.png \
     )
 
     parser.add_argument(
+        '--version',
+        action='version',
+        version=f'PanViz {PANVIZ_VERSION}',
+    )
+
+    parser.add_argument(
         '-f', '--file',
         type=str,
         required=True,
@@ -95,7 +102,7 @@ PanViz -f complex.pdb -y -o ligand_interactions.png \
         action='store_false',
         help='Do not generate a PyMOL session.'
     )
-    parser.set_defaults(pymol=True)
+    parser.set_defaults(pymol=False)
 
     parser.add_argument(
         '--canvas_height',
