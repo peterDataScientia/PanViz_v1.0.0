@@ -278,33 +278,6 @@ def _build_pdbqt_complex(receptor_path, ligand_path, work_root, pose_index=0):
     combined.write_text("\n".join(receptor_lines + ["TER"] + ligand_lines + ["END"]) + "\n", encoding="utf-8")
     return combined, len(blocks)
 
-def _first_col(df, names):
-    lookup={str(c).lower():c for c in df.columns}
-    for name in names:
-        if name.lower() in lookup:return lookup[name.lower()]
-    return None
-
-def _read_interactions(interaction_dir):
-    mapping={"HPI":"Hydrophobic interaction","HB":"Hydrogen bond","PS":"π-Stacking","PC":"π-Cation","SB":"Salt bridge"}
-    rows=[]
-    for path in sorted(Path(interaction_dir).glob("*.csv")):
-        code=path.stem.rsplit("_",1)[-1]
-        if code not in mapping: continue
-        df=pd.read_csv(path)
-        if df.empty: continue
-        rt=_first_col(df,["RESTYPE","restype"]);rn=_first_col(df,["RESNR","resnr"]);rc=_first_col(df,["RESCHAIN","reschain"]);dist=_first_col(df,["DIST","distance","distance_ad","distance_ah","dist"])
-        for _,r in df.iterrows():
-            residue=""
-            if rt is not None and pd.notna(r[rt]):residue+=str(r[rt]).strip()
-            if rn is not None and pd.notna(r[rn]):residue+=str(r[rn]).strip()
-            if rc is not None and pd.notna(r[rc]):residue+=str(r[rc]).strip()
-            d=None
-            if dist is not None:
-                try:d=float(r[dist])
-                except (TypeError,ValueError):pass
-            rows.append({"Residue":residue or "—","Interaction":mapping[code],"Distance (Å)":d})
-    return pd.DataFrame(rows)
-
 def _sha256_bytes(data):
     return hashlib.sha256(data).hexdigest()
 
@@ -352,7 +325,9 @@ def _write_project_manifest(result, manifest_path):
         "interaction_count": int(len(result["interaction_df"])),
         "residue_count": int(result["interaction_df"]["Residue"].nunique()) if not result["interaction_df"].empty else 0,
         "interaction_types": sorted(result["interaction_df"]["Interaction"].dropna().unique().tolist()) if not result["interaction_df"].empty else [],
-        "scientific_data_policy": "PLIP interaction measurements are not altered by editor styling.",
+        "scientific_record_signature_sha256": result.get("scientific_signature"),
+        "publication_renderer_baseline": "237db30af8639379ed3976657f9bbcce28110725",
+        "scientific_data_policy": "PLIP interaction measurements are normalized independently of presentation styling; the approved publication renderer remains unchanged.",
     }
     Path(manifest_path).write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
 
@@ -536,12 +511,25 @@ rec1,rec2,rec3,rec4=st.columns(4)
 rec1.metric("Interactions",len(interaction_df));rec2.metric("Residues",interaction_df["Residue"].nunique() if not interaction_df.empty else 0);rec3.metric("Interaction types",interaction_df["Interaction"].nunique() if not interaction_df.empty else 0);rec4.metric("Binding sites",result["binding_site_count"])
 
 if not interaction_df.empty:
+    display_columns=[
+        "Record ID",
+        "Residue",
+        "Interaction",
+        "Distance (Å)",
+        "Rendered in figure",
+    ]
     st.dataframe(
-        interaction_df,
+        interaction_df[display_columns],
         use_container_width=True,
         hide_index=True,
         height=min(720, max(320, 38 * (len(interaction_df) + 1))),
     )
+    nonrendered=int((~interaction_df["Rendered in figure"]).sum())
+    if nonrendered:
+        st.caption(
+            f"{nonrendered} PLIP record(s) belong to interaction classes preserved in the v6 scientific record layer "
+            "but not yet drawn by the protected publication renderer."
+        )
 else:
     st.info("No PLIP interaction records were returned for this binding site.")
 
@@ -552,7 +540,7 @@ with st.expander("Downloads & project files", expanded=False):
     d1,d2,d3=st.columns(3)
     with d1:
         st.download_button(
-            "Original PNG",
+            "Publication PNG",
             data=png_path.read_bytes(),
             file_name=f"{source_stem}_PanViz.png",
             mime="image/png",
@@ -560,7 +548,7 @@ with st.expander("Downloads & project files", expanded=False):
         )
     with d2:
         st.download_button(
-            "Original SVG",
+            "Publication SVG",
             data=svg_path.read_bytes(),
             file_name=f"{source_stem}_PanViz.svg",
             mime="image/svg+xml",
@@ -575,17 +563,27 @@ with st.expander("Downloads & project files", expanded=False):
             use_container_width=True,
         )
 
-    d4,d5,d6=st.columns(3)
+    d4,d5,d6,d7=st.columns(4)
     with d4:
         if not interaction_df.empty:
             st.download_button(
-                "Interaction table CSV",
+                "Scientific records CSV",
                 data=interaction_df.to_csv(index=False).encode("utf-8"),
-                file_name=f"{source_stem}_{selected_site.replace(':','_')}_interactions.csv",
+                file_name=f"{source_stem}_{selected_site.replace(':','_')}_scientific_records.csv",
                 mime="text/csv",
                 use_container_width=True,
             )
     with d5:
+        scientific_json=Path(result["scientific_exports"]["json"])
+        if scientific_json.exists():
+            st.download_button(
+                "Scientific records JSON",
+                data=scientific_json.read_bytes(),
+                file_name=scientific_json.name,
+                mime="application/json",
+                use_container_width=True,
+            )
+    with d6:
         if prepared.exists():
             st.download_button(
                 "PLIP-prepared PDB",
@@ -594,7 +592,7 @@ with st.expander("Downloads & project files", expanded=False):
                 mime="chemical/x-pdb",
                 use_container_width=True,
             )
-    with d6:
+    with d7:
         st.download_button(
             "Initial layout JSON",
             data=json.dumps(result["scene"],indent=2,ensure_ascii=False).encode("utf-8"),
