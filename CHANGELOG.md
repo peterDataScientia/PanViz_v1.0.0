@@ -1,5 +1,6 @@
 # v6.0.0 — Architecture Upgrade + Eight-Class Interaction Rendering
 
+- Standardized the publication legend with canonical eight-class ordering, formal labels, and automatic centered multi-row wrapping while retaining existing interaction-line styles.
 - Replaced the duplicate Streamlit interaction tables with one live interaction table inside the editor.
 - The live table combines immutable PLIP-detected interactions with editor-created interactions; manual rows are marked **Manually added**.
 - Removed separate static PNG/SVG download buttons from the Streamlit page; publication exports now come directly from the editor.
