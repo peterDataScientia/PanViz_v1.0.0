@@ -72,7 +72,7 @@
   <div class="group"><button id="pv-style-toggle">Styles</button><button id="pv-add-bond">Add bond</button><button id="pv-add-interaction">Add interaction</button><button id="pv-add-distance">Add distance</button><button id="pv-add-text">Add text</button><button id="pv-add-arrow">Add arrow</button></div>
   <div class="group"><button id="pv-clear-selection">Clear</button></div>
   <div class="group"><button id="pv-load-json">Load layout</button><button id="pv-json">Save layout</button></div>
-  <div class="group"><span class="label">PNG</span><select id="pv-png-scale"><option value="1">1×</option><option value="2">2×</option><option value="4" selected>4×</option><option value="6">6×</option></select><button id="pv-svg" class="primary">Export SVG</button><button id="pv-png">Export PNG</button><button id="pv-pdf">Export PDF</button></div>
+  <div class="group"><span class="label">Export scale</span><select id="pv-png-scale"><option value="1">1×</option><option value="2">2×</option><option value="4" selected>4×</option><option value="6">6×</option></select><button id="pv-svg" class="primary">Export SVG</button><button id="pv-png">Export PNG</button><button id="pv-pdf">Export PDF</button></div>
   <input id="pv-layout-file" type="file" accept="application/json,.json,.panviz" style="display:none">
   <span id="pv-status">Ready</span>
 </div>
@@ -785,19 +785,20 @@ function commitBondWidth(){pushUndo();future=[];}
 function clearSelection(){selectedItems=[];selected=null;drag=null;ribbon.style.display='none';editPop.style.display='none';renderSelection();}
 function stripPrivate(x){for(const k of Object.keys(x)){if(k.startsWith('_'))delete x[k];}return x;}
 function exportCanvasGeometry(){return {width:Math.max(1,Number(state.width)||1200),height:Math.max(1,Number(state.height)||850)};}
+function exportScale(){return Math.max(1,Math.min(6,Number(document.getElementById('pv-png-scale')?.value)||4));}
+function scaledExportGeometry(){const g=exportCanvasGeometry(),scale=exportScale();return {baseWidth:g.width,baseHeight:g.height,scale,width:Math.max(1,Math.round(g.width*scale)),height:Math.max(1,Math.round(g.height*scale))};}
 function sceneSvg(){const g=exportCanvasGeometry(),c=svg.cloneNode(true);c.querySelector('#pv-selection')?.remove();c.querySelector('#pv-ui')?.remove();c.querySelector('#pv-molecule-copy-targets')?.remove();c.querySelectorAll('.pv-hit,.pv-copy-hit').forEach(n=>n.remove());c.querySelectorAll('[class="pv-locked"]')?.forEach(n=>n.removeAttribute('class'));c.querySelectorAll('[vector-effect]').forEach(n=>n.removeAttribute('vector-effect'));c.setAttribute('xmlns','http://www.w3.org/2000/svg');c.setAttribute('width',g.width);c.setAttribute('height',g.height);c.setAttribute('viewBox',`0 0 ${g.width} ${g.height}`);c.setAttribute('preserveAspectRatio','xMinYMin meet');c.setAttribute('shape-rendering','geometricPrecision');const bg=el('rect',{x:0,y:0,width:g.width,height:g.height,fill:'#fff'});c.insertBefore(bg,c.firstChild);return '<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(c);}
 function download(name,type,data){const blob=data instanceof Blob?data:new Blob([data],{type});const a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);}
 async function exportPDF(){
-  const filename=((state.site||'PanViz').replaceAll(':','_')+'_edited.pdf').replace(/[<>"']/g,'_');
+  const xg=scaledExportGeometry();
+  const filename=((state.site||'PanViz').replaceAll(':','_')+`_edited_${xg.scale}x.pdf`).replace(/[<>"']/g,'_');
 
-  // Preserve the PanViz canvas exactly. SVG/CSS pixels are defined at 96 dpi,
-  // while PDF points are 72 per inch, so 1 px = 72/96 = 0.75 pt.
-  const exportGeometry=exportCanvasGeometry();
-  const canvasWpx=exportGeometry.width;
-  const canvasHpx=exportGeometry.height;
+  // Match the PNG export dimensions exactly at the selected export scale.
+  // The PDF stays vector, but its page is sized from the same pixel geometry
+  // used by the PNG export. 96 CSS px = 72 PDF points.
   const pxToPt=72/96;
-  const pdfW=canvasWpx*pxToPt;
-  const pdfH=canvasHpx*pxToPt;
+  const pdfW=xg.width*pxToPt;
+  const pdfH=xg.height*pxToPt;
 
   if(!window.jspdf||!window.jspdf.jsPDF){
     alert('PDF library did not load. Please refresh the PanViz page and try again.');
@@ -818,8 +819,8 @@ async function exportPDF(){
   holder.style.position='fixed';
   holder.style.left='-100000px';
   holder.style.top='0';
-  holder.style.width=canvasWpx+'px';
-  holder.style.height=canvasHpx+'px';
+  holder.style.width=xg.baseWidth+'px';
+  holder.style.height=xg.baseHeight+'px';
   holder.style.opacity='0';
   holder.style.pointerEvents='none';
   holder.innerHTML=svgMarkup;
@@ -832,10 +833,10 @@ async function exportPDF(){
     return;
   }
 
-  // Keep the original SVG coordinate system untouched.
-  svgNode.setAttribute('width',String(canvasWpx));
-  svgNode.setAttribute('height',String(canvasHpx));
-  svgNode.setAttribute('viewBox',`0 0 ${canvasWpx} ${canvasHpx}`);
+  // Preserve the original coordinate system; scale only the export page/output.
+  svgNode.setAttribute('width',String(xg.baseWidth));
+  svgNode.setAttribute('height',String(xg.baseHeight));
+  svgNode.setAttribute('viewBox',`0 0 ${xg.baseWidth} ${xg.baseHeight}`);
   svgNode.setAttribute('preserveAspectRatio','xMinYMin meet');
 
   const {jsPDF}=window.jspdf;
@@ -848,7 +849,7 @@ async function exportPDF(){
   });
 
   try{
-    status.textContent='Generating exact-size vector PDF…';
+    status.textContent=`Generating vector PDF at ${xg.scale}× export size…`;
     await pdf.svg(svgNode,{
       x:0,
       y:0,
@@ -858,8 +859,7 @@ async function exportPDF(){
     });
     pdf.save(filename);
     status.textContent=
-      'PDF downloaded at exact PanViz canvas size ('+
-      canvasWpx+'×'+canvasHpx+' px).';
+      `PDF downloaded at ${xg.width}×${xg.height}, matching the ${xg.scale}× PNG export size.`;
   }catch(err){
     console.error('PanViz PDF export failed',err);
     alert('PDF export failed: '+(err&&err.message?err.message:String(err)));
@@ -908,7 +908,7 @@ document.getElementById('pv-int-use-global').onclick=()=>{pushUndo();const k=doc
 
 document.getElementById('pv-json').onclick=()=>download((state.site||'PanViz').replaceAll(':','_')+'_layout.panviz.json','application/json',JSON.stringify(stripPrivate(clone(state)),null,2));
 document.getElementById('pv-svg').onclick=()=>download((state.site||'PanViz').replaceAll(':','_')+'_edited.svg','image/svg+xml;charset=utf-8',sceneSvg());
-document.getElementById('pv-png').onclick=()=>{const g=exportCanvasGeometry(),scale=Math.max(1,Math.min(6,Number(document.getElementById('pv-png-scale').value)||4)),txt=sceneSvg(),blob=new Blob([txt],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=Math.max(1,Math.round(g.width*scale));c.height=Math.max(1,Math.round(g.height*scale));const ctx=c.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);c.toBlob(b=>download((state.site||'PanViz').replaceAll(':','_')+'_edited_'+scale+'x.png','image/png',b),'image/png');};img.src=url;};
+document.getElementById('pv-png').onclick=()=>{const xg=scaledExportGeometry(),txt=sceneSvg(),blob=new Blob([txt],{type:'image/svg+xml;charset=utf-8'}),url=URL.createObjectURL(blob),img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=xg.width;c.height=xg.height;const ctx=c.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);c.toBlob(b=>download((state.site||'PanViz').replaceAll(':','_')+'_edited_'+xg.scale+'x.png','image/png',b),'image/png');};img.src=url;};
 document.getElementById('pv-pdf').onclick=exportPDF;
 svg.addEventListener('pointerdown',e=>{if(e.target===svg){clearSelection();}});
 svg.addEventListener('pointermove',onCanvasPointerMove,{passive:false});
