@@ -8,8 +8,8 @@ from plip.exchange.report import BindingSiteReport
 
 
 INTERACTION_CLASSES = {
-    "HPI": ("hydrophobic", "Hydrophobic"),
-    "HB": ("hbond", "H-bond"),
+    "HPI": ("hydrophobic", "Hydrophobic contact"),
+    "HB": ("hbond", "Hydrogen bond"),
     "WB": ("waterbridge", "Water bridge"),
     "SB": ("saltbridge", "Salt bridge"),
     "PS": ("pistacking", "π-Stacking"),
@@ -167,8 +167,8 @@ def write_scientific_exports(
 
 
 FIGURE_INTERACTION_LABELS = {
-    "HPI": "Hydrophobic",
-    "HB": "H-bond",
+    "HPI": "Hydrophobic contact",
+    "HB": "Hydrogen bond",
     "WB": "Water bridge",
     "SB": "Salt bridge",
     "PS": "π-Stacking",
