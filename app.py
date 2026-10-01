@@ -525,7 +525,7 @@ with st.expander("Downloads & project files", expanded=False):
     d1,d2,d3=st.columns(3)
     with d1:
         st.download_button(
-            "Original PNG",
+            "PanViz PNG",
             data=png_path.read_bytes(),
             file_name=f"{source_stem}_PanViz.png",
             mime="image/png",
@@ -533,7 +533,7 @@ with st.expander("Downloads & project files", expanded=False):
         )
     with d2:
         st.download_button(
-            "Original SVG",
+            "PanViz SVG",
             data=svg_path.read_bytes(),
             file_name=f"{source_stem}_PanViz.svg",
             mime="image/svg+xml",
