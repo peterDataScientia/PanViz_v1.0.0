@@ -28,10 +28,12 @@ print("APPCHK 05 — PLIP PDBComplex import OK", flush=True)
 from utils import plip_2d_interactions
 print("APPCHK 06 — utils import OK", flush=True)
 from interactive_engine import build_editor_scene
-print("APPCHK 07 — interactive_engine import OK", flush=True)
+from scientific_records import build_scientific_records, write_scientific_exports
+from panviz_version import PANVIZ_VERSION
+print("APPCHK 07 — interactive_engine + v6 scientific data layer import OK", flush=True)
 
 print("APPCHK 08 — before set_page_config", flush=True)
-st.set_page_config(page_title="PanViz v5.8.6", page_icon="🧬", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title=f"PanViz v{PANVIZ_VERSION}", page_icon="🧬", layout="wide", initial_sidebar_state="expanded")
 print("APPCHK 09 — set_page_config OK", flush=True)
 print("APPCHK 10 — before main CSS markdown", flush=True)
 st.markdown("""
@@ -60,7 +62,7 @@ div[data-testid="stFileUploader"]{border:1px dashed #b8c8de;border-radius:14px;b
 """, unsafe_allow_html=True)
 print("APPCHK 11 — main CSS markdown OK", flush=True)
 print("APPCHK 12 — before PanViz header markdown", flush=True)
-st.markdown("""<div class="panviz-shell"><div class="panviz-brand"><div class="panviz-mark">🧬</div><div><div class="panviz-title">PanViz</div><div class="panviz-subtitle">PLIP-based protein–ligand interaction visualization &amp; publication figure editor</div></div></div><div class="panviz-badges"><span class="panviz-badge">PLIP interaction analysis</span><span class="panviz-badge">Editable presentation layer</span><span class="panviz-badge">Molecular topology locked</span><span class="panviz-badge">v5.8.6</span></div></div>""", unsafe_allow_html=True)
+st.markdown(f"""<div class="panviz-shell"><div class="panviz-brand"><div class="panviz-mark">🧬</div><div><div class="panviz-title">PanViz</div><div class="panviz-subtitle">PLIP-based protein–ligand interaction visualization &amp; publication figure editor</div></div></div><div class="panviz-badges"><span class="panviz-badge">PLIP interaction analysis</span><span class="panviz-badge">Editable presentation layer</span><span class="panviz-badge">Molecular topology locked</span><span class="panviz-badge">v{PANVIZ_VERSION}</span></div></div>""", unsafe_allow_html=True)
 print("APPCHK 13 — PanViz header markdown OK", flush=True)
 
 print("APPCHK 14 — before editor.html read", flush=True)
@@ -191,7 +193,7 @@ def _convert_with_obabel(input_path, output_path, input_format, selected_block=N
         # Cleanup failure must not mask a successful Open Babel conversion.
         _safe_remove(cleanup)
 
-def _normalize_docked_ligand_pdb(pdb_path, out_path, chain="Z", residue_number=900, residue_name="LIG"):
+def _normalize_docked_ligand_pdb(pdb_path, out_path, chain="Z", residue_number=900, residue_name="LIG", start_serial=1):
     """Normalize a converted docking pose into a PLIP-friendly ligand residue.
 
     Atom serials are rewritten consistently and any CONECT records emitted by Open Babel
@@ -199,7 +201,7 @@ def _normalize_docked_ligand_pdb(pdb_path, out_path, chain="Z", residue_number=9
     """
     lines = Path(pdb_path).read_text(encoding="utf-8", errors="replace").splitlines()
     atom_lines=[]; conect=[]; serial_map={}
-    serial=1
+    serial=max(1, int(start_serial))
     for line in lines:
         if line.startswith(("ATOM", "HETATM")):
             s=line.ljust(80)
@@ -255,7 +257,20 @@ def _build_pdbqt_complex(receptor_path, ligand_path, work_root, pose_index=0):
         raise ValueError(f"Docking pose {pose_index + 1} is outside the available range (1–{len(blocks)}).")
     _convert_with_obabel(ligand_path, ligand_pdb_raw, "pdbqt", selected_block=blocks[pose_index])
     _validate_pdb_has_atoms(ligand_pdb_raw, "ligand / docking pose")
-    _normalize_docked_ligand_pdb(ligand_pdb_raw, ligand_pdb)
+
+    receptor_serials=[]
+    for line in receptor_pdb.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith(("ATOM", "HETATM")):
+            try:
+                receptor_serials.append(int(line[6:11]))
+            except ValueError:
+                pass
+    ligand_start=(max(receptor_serials)+1) if receptor_serials else 1
+    _normalize_docked_ligand_pdb(
+        ligand_pdb_raw,
+        ligand_pdb,
+        start_serial=ligand_start,
+    )
 
     combined = work_root / "panviz_pdbqt_complex.pdb"
     receptor_lines=[x for x in receptor_pdb.read_text(encoding="utf-8", errors="replace").splitlines() if x[:6].strip() in {"ATOM", "HETATM", "TER"}]
@@ -324,7 +339,7 @@ def _zip_tree(source_root, output_zip):
 
 def _write_project_manifest(result, manifest_path):
     manifest = {
-        "panviz_version": "5.8.6",
+        "panviz_version": PANVIZ_VERSION,
         "created_utc": datetime.now(timezone.utc).isoformat(),
         "input_mode": result["input_mode"],
         "source_files": result["source_files"],
@@ -348,9 +363,11 @@ print("APPCHK 17 — input section markdown OK", flush=True)
 print("APPCHK 18 — before input_mode radio", flush=True)
 input_mode=st.radio("Input mode",["PDB complex","Docking PDBQT"],horizontal=True)
 print(f"APPCHK 19 — input_mode radio OK ({input_mode})", flush=True)
-print("APPCHK 20 — before tempfile.mkdtemp", flush=True)
-work_root=Path(tempfile.mkdtemp(prefix="panviz_"))
-print(f"APPCHK 21 — tempfile OK ({work_root})", flush=True)
+print("APPCHK 20 — before session workspace", flush=True)
+if "panviz_work_root" not in st.session_state or not Path(st.session_state.panviz_work_root).exists():
+    st.session_state.panviz_work_root=tempfile.mkdtemp(prefix="panviz_")
+work_root=Path(st.session_state.panviz_work_root)
+print(f"APPCHK 21 — session workspace OK ({work_root})", flush=True)
 source_files=[]
 source_payloads=[]
 pose_index=None
@@ -447,7 +464,12 @@ if analyze:
             plip_2d_interactions(str(pdb_path),selected_site,save_files=True,save_pymol=False,canvas_height=int(out_height),canvas_width=int(out_width),out_name="PanViz_interactions.svg",output_dir=str(results_root),analysis=analysis_obj)
             site_dir=results_root/selected_site.replace(":","_")
             png_path=site_dir/"figures"/"PanViz_interactions.png";svg_path=site_dir/"figures"/"PanViz_interactions.svg";interaction_dir=site_dir/"interactions"
-            interaction_df=_read_interactions(interaction_dir)
+            interaction_df,scientific_tables=build_scientific_records(analysis_obj["my_interactions"])
+            scientific_exports=write_scientific_exports(
+                interaction_df,
+                scientific_tables,
+                interaction_dir,
+            )
             scene,scene_root=build_editor_scene(str(pdb_path),selected_site,width=int(out_width),height=int(out_height),base_svg=svg_path.read_text(encoding="utf-8"),analysis=analysis_obj)
             (site_dir/"PanViz_initial_layout.json").write_text(json.dumps(scene,indent=2,ensure_ascii=False),encoding="utf-8")
             result={
@@ -471,6 +493,8 @@ if analyze:
                 "results_root": str(results_root),
                 "scene": scene,
                 "analysis_obj": analysis_obj,
+                "scientific_exports": scientific_exports,
+                "scientific_signature": scientific_exports["signature"],
             }
             inputs_dir=results_root/"inputs";inputs_dir.mkdir(parents=True,exist_ok=True)
             for name,data in source_payloads:
@@ -478,9 +502,9 @@ if analyze:
                 target.write_bytes(data)
             project_readme = results_root/"PROJECT_README.md"
             project_readme.write_text(
-                "# PanViz 5.8.6 project bundle\n\n"
+                f"# PanViz {PANVIZ_VERSION} project bundle\n\n"
                 "This package contains the original uploaded input file(s), the PLIP-prepared complex, "
-                "original PanViz PNG/SVG figures, PLIP interaction CSV tables, the initial editable layout, "
+                "original PanViz PNG/SVG figures, canonical PLIP scientific records, the initial editable layout, "
                 "and a machine-readable manifest. Presentation styling in PanViz does not modify the underlying "
                 "PLIP scientific interaction records. Use the editor's **Save layout** and **Load layout** controls "
                 "to carry edited presentation state between sessions.\n",
@@ -504,7 +528,7 @@ png_path=Path(result["png_path"]); svg_path=Path(result["svg_path"]); site_dir=P
 
 st.markdown('<div class="panviz-section"><h4>3 · Interactive figure editor</h4>', unsafe_allow_html=True)
 render_editor(result["scene"])
-st.caption("v5.8.6: the imported molecular structure and PLIP scientific records are immutable; only the separate presentation annotation layer can be edited, saved, reloaded, and exported.")
+st.caption(f"v{PANVIZ_VERSION}: the approved publication renderer is preserved; imported molecular structure and PLIP scientific records remain immutable while only the presentation layer is editable.")
 st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown('<div class="panviz-section"><h4>4 · Scientific interaction records</h4>', unsafe_allow_html=True)
@@ -579,5 +603,5 @@ with st.expander("Downloads & project files", expanded=False):
             use_container_width=True,
         )
 
-st.markdown('</div><div class="panviz-foot">PanViz v5.8.6 · one reusable PLIP analysis → locked molecular scene + editable presentation annotations + scientific interaction records + complete project package.</div>', unsafe_allow_html=True)
+st.markdown(f'</div><div class="panviz-foot">PanViz v{PANVIZ_VERSION} · protected publication renderer + one reusable PLIP analysis + immutable scientific records + editable presentation layer.</div>', unsafe_allow_html=True)
 
