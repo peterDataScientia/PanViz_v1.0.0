@@ -846,8 +846,17 @@ async function registerPdfUnicodeFonts(pdf){
 }
 function applyPdfUnicodeFont(svgNode){
   svgNode.querySelectorAll('text').forEach(node=>{
+    node.dataset.pvPdfOriginalFontFamily=node.getAttribute('font-family')||'Arial';
     node.setAttribute('font-family',PANVIZ_PDF_FONT_FAMILY);
     node.style.fontFamily=PANVIZ_PDF_FONT_FAMILY;
+  });
+}
+function restoreSvgTextFonts(svgNode){
+  svgNode.querySelectorAll('text').forEach(node=>{
+    const original=node.dataset.pvPdfOriginalFontFamily||'Arial';
+    node.setAttribute('font-family',original);
+    node.style.fontFamily=original;
+    delete node.dataset.pvPdfOriginalFontFamily;
   });
 }
 async function rasterizeSvgNode(svgNode,width,height){
@@ -942,6 +951,7 @@ async function exportPDF(){
           `Vector PDF downloaded at ${xg.width}×${xg.height}; Unicode legend text preserved.`;
       }catch(vectorErr){
         console.warn('Vector PDF conversion failed; retrying as high-resolution raster PDF.',vectorErr);
+        restoreSvgTextFonts(svgNode);
         const fallbackPdf=new jsPDF({
           orientation:pdfW>=pdfH?'landscape':'portrait',
           unit:'pt',
