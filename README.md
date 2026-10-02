@@ -68,6 +68,12 @@ These fields are not modified by presentation editing.
 - The publication legend automatically wraps into centered rows when needed, preventing long eight-class legends from extending beyond the canvas.
 - Existing interaction line styles remain unchanged.
 
+### Unicode-safe PDF text
+- PDF export embeds Liberation Sans at runtime for selectable Unicode text, preserving Greek scientific symbols such as **π** in π-Stacking and π-Cation.
+- The font source is pinned to Git commit `ef7161f03e305982b0b247e9a0b7cc472376dd83` of `shantigilbert/liberation-fonts-ttf`.
+- Liberation Sans is used because it is metrically compatible with Arial and includes Greek glyphs.
+- If the Unicode font or vector conversion is unavailable, PanViz falls back to a high-resolution visual-fidelity PDF rather than exporting corrupted glyphs.
+
 ### Live interaction table and export
 - The interactive editor is the single figure surface; a duplicate static figure is not shown or offered separately for download.
 - One live interaction table is rendered directly below the editor.
