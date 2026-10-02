@@ -103,3 +103,28 @@ def test_legend_layout_does_not_read_state_during_state_initialization():
     assert "state.width" not in legend_layout
     assert "canvasWidth??l?._canvasWidth??initial?.width??1200" in legend_layout
     assert "measureLegend(s.legend,s.width);" in editor
+
+
+def test_pdf_export_preserves_unicode_greek_symbols():
+    editor = Path("editor.html").read_text(encoding="utf-8")
+
+    assert "π-Stacking" in editor
+    assert "π-Cation" in editor
+    assert "PANVIZ_PDF_FONT_FAMILY='PanVizLiberationSans'" in editor
+    assert "Identity-H" in editor
+    assert "registerPdfUnicodeFonts(pdf)" in editor
+    assert "applyPdfUnicodeFont(svgNode)" in editor
+    assert "writeRasterPdfFallback" in editor
+    assert "Unicode legend text preserved" in editor
+    assert ".replace('π','Pi')" not in editor
+    assert '.replace("π","Pi")' not in editor
+
+
+def test_pdf_unicode_font_source_is_version_pinned():
+    editor = Path("editor.html").read_text(encoding="utf-8")
+
+    assert "ef7161f03e305982b0b247e9a0b7cc472376dd83" in editor
+    assert "LiberationSans-Regular.ttf" in editor
+    assert "LiberationSans-Bold.ttf" in editor
+    assert "LiberationSans-Italic.ttf" in editor
+    assert "LiberationSans-BoldItalic.ttf" in editor
