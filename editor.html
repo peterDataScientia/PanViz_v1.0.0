@@ -815,6 +815,56 @@ function exportScale(){return Math.max(1,Math.min(6,Number(document.getElementBy
 function scaledExportGeometry(){const g=exportCanvasGeometry(),scale=exportScale();return {baseWidth:g.width,baseHeight:g.height,scale,width:Math.max(1,Math.round(g.width*scale)),height:Math.max(1,Math.round(g.height*scale))};}
 function sceneSvg(){const g=exportCanvasGeometry(),c=svg.cloneNode(true);c.querySelector('#pv-selection')?.remove();c.querySelector('#pv-ui')?.remove();c.querySelector('#pv-molecule-copy-targets')?.remove();c.querySelectorAll('.pv-hit,.pv-copy-hit').forEach(n=>n.remove());c.querySelectorAll('[class="pv-locked"]')?.forEach(n=>n.removeAttribute('class'));c.querySelectorAll('[vector-effect]').forEach(n=>n.removeAttribute('vector-effect'));c.setAttribute('xmlns','http://www.w3.org/2000/svg');c.setAttribute('width',g.width);c.setAttribute('height',g.height);c.setAttribute('viewBox',`0 0 ${g.width} ${g.height}`);c.setAttribute('preserveAspectRatio','xMinYMin meet');c.setAttribute('shape-rendering','geometricPrecision');const bg=el('rect',{x:0,y:0,width:g.width,height:g.height,fill:'#fff'});c.insertBefore(bg,c.firstChild);return '<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(c);}
 function download(name,type,data){const blob=data instanceof Blob?data:new Blob([data],{type});const a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1000);}
+const PANVIZ_PDF_FONT_FAMILY='PanVizLiberationSans';
+const PANVIZ_PDF_FONT_BASE='https://raw.githubusercontent.com/shantigilbert/liberation-fonts-ttf/ef7161f03e305982b0b247e9a0b7cc472376dd83/';
+const PANVIZ_PDF_FONTS=[
+  ['LiberationSans-Regular.ttf','normal'],
+  ['LiberationSans-Bold.ttf','bold'],
+  ['LiberationSans-Italic.ttf','italic'],
+  ['LiberationSans-BoldItalic.ttf','bolditalic']
+];
+function arrayBufferToBase64(buffer){
+  const bytes=new Uint8Array(buffer),chunk=0x8000;let binary='';
+  for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,Math.min(i+chunk,bytes.length)));
+  return btoa(binary);
+}
+async function registerPdfUnicodeFonts(pdf){
+  try{
+    const loaded=await Promise.all(PANVIZ_PDF_FONTS.map(async([file,style])=>{
+      const response=await fetch(PANVIZ_PDF_FONT_BASE+file,{mode:'cors',cache:'force-cache'});
+      if(!response.ok)throw new Error(`Font request failed: ${file} (${response.status})`);
+      const base64=arrayBufferToBase64(await response.arrayBuffer());
+      pdf.addFileToVFS(file,base64);
+      pdf.addFont(file,PANVIZ_PDF_FONT_FAMILY,style,'Identity-H');
+      return true;
+    }));
+    return loaded.every(Boolean);
+  }catch(err){
+    console.warn('PanViz Unicode PDF font unavailable; using raster PDF fallback.',err);
+    return false;
+  }
+}
+function applyPdfUnicodeFont(svgNode){
+  svgNode.querySelectorAll('text').forEach(node=>{
+    node.setAttribute('font-family',PANVIZ_PDF_FONT_FAMILY);
+    node.style.fontFamily=PANVIZ_PDF_FONT_FAMILY;
+  });
+}
+async function rasterizeSvgNode(svgNode,width,height){
+  const markup='<?xml version="1.0" encoding="UTF-8"?>\n'+new XMLSerializer().serializeToString(svgNode);
+  const blob=new Blob([markup],{type:'image/svg+xml;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  try{
+    const img=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error('SVG rasterization failed'));image.src=url;});
+    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext('2d',{alpha:false});ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(img,0,0,width,height);
+    return canvas.toDataURL('image/png');
+  }finally{URL.revokeObjectURL(url);}
+}
+async function writeRasterPdfFallback(pdf,svgNode,xg,pdfW,pdfH){
+  const dataUrl=await rasterizeSvgNode(svgNode,xg.width,xg.height);
+  pdf.addImage(dataUrl,'PNG',0,0,pdfW,pdfH,undefined,'FAST');
+}
 async function exportPDF(){
   const xg=scaledExportGeometry();
   const filename=((state.site||'PanViz').replaceAll(':','_')+`_edited_${xg.scale}x.pdf`).replace(/[<>"']/g,'_');
@@ -875,17 +925,40 @@ async function exportPDF(){
   });
 
   try{
-    status.textContent=`Generating vector PDF at ${xg.scale}× export size…`;
-    await pdf.svg(svgNode,{
-      x:0,
-      y:0,
-      width:pdfW,
-      height:pdfH,
-      preserveAspectRatio:'xMinYMin meet'
-    });
-    pdf.save(filename);
-    status.textContent=
-      `PDF downloaded at ${xg.width}×${xg.height}, matching the ${xg.scale}× PNG export size.`;
+    status.textContent=`Preparing Unicode-safe vector PDF at ${xg.scale}× export size…`;
+    const unicodeReady=await registerPdfUnicodeFonts(pdf);
+    if(unicodeReady){
+      applyPdfUnicodeFont(svgNode);
+      try{
+        await pdf.svg(svgNode,{
+          x:0,
+          y:0,
+          width:pdfW,
+          height:pdfH,
+          preserveAspectRatio:'xMinYMin meet'
+        });
+        pdf.save(filename);
+        status.textContent=
+          `Vector PDF downloaded at ${xg.width}×${xg.height}; Unicode legend text preserved.`;
+      }catch(vectorErr){
+        console.warn('Vector PDF conversion failed; retrying as high-resolution raster PDF.',vectorErr);
+        const fallbackPdf=new jsPDF({
+          orientation:pdfW>=pdfH?'landscape':'portrait',
+          unit:'pt',
+          format:[pdfW,pdfH],
+          compress:true
+        });
+        await writeRasterPdfFallback(fallbackPdf,svgNode,xg,pdfW,pdfH);
+        fallbackPdf.save(filename);
+        status.textContent=
+          `PDF downloaded at ${xg.width}×${xg.height} using visual-fidelity fallback.`;
+      }
+    }else{
+      await writeRasterPdfFallback(pdf,svgNode,xg,pdfW,pdfH);
+      pdf.save(filename);
+      status.textContent=
+        `PDF downloaded at ${xg.width}×${xg.height} using visual-fidelity fallback.`;
+    }
   }catch(err){
     console.error('PanViz PDF export failed',err);
     alert('PDF export failed: '+(err&&err.message?err.message:String(err)));
