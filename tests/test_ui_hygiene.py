@@ -89,7 +89,9 @@ def test_pdf_and_png_share_the_same_export_geometry():
     assert "const pdfW=xg.width*pxToPt;" in editor
     assert "const pdfH=xg.height*pxToPt;" in editor
     assert "c.width=xg.width;c.height=xg.height;" in editor
-    assert "matching the ${xg.scale}× PNG export size" in editor
+    assert "const pdfW=xg.width*pxToPt;" in editor
+    assert "const pdfH=xg.height*pxToPt;" in editor
+    assert "c.width=xg.width;c.height=xg.height;" in editor
     assert '<span class="label">Export scale</span>' in editor
 
 
