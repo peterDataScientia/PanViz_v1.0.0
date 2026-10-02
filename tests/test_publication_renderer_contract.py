@@ -152,8 +152,8 @@ def test_publication_legend_has_fixed_scientific_order_and_formal_labels():
 def test_editor_legend_wraps_within_canvas():
     editor = Path("editor.html").read_text(encoding="utf-8")
     assert "const LEGEND_ORDER=['HPI','HB','WB','SB','PS','PC','XB','MC'];" in editor
-    assert "function legendLayout(l)" in editor
-    assert "Math.min(Number(state.width||1200)-80,900)" in editor
+    assert "function legendLayout(l,canvasWidth=null)" in editor
+    assert "Math.min(width-80,900)" in editor
     assert "for(const row of layout.rows)" in editor
     assert "let cursor=ox-row.width/2;" in editor
 
